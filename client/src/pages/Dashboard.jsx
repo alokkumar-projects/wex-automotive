@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Scatter } from 'react-chartjs-2';
 import { Chart as ChartJS, PointElement, LinearScale, Tooltip, Legend } from 'chart.js';
 import { useVehicles } from '../store/useVehicles.js';
@@ -8,14 +8,22 @@ ChartJS.register(PointElement, LinearScale, Tooltip, Legend);
 const colorFor = (origin) => ({ USA: 'rgba(37,99,235,0.7)', Europe: 'rgba(34,197,94,0.7)', Japan: 'rgba(239,68,68,0.7)' }[origin] || 'rgba(100,116,139,0.7)');
 
 export default function Dashboard() {
-  const { vehicles } = useVehicles();
+  // FIX: Select the 'allVehicles' state from the store.
+  const allVehicles = useVehicles(state => state.allVehicles);
 
-  const datasets = ['USA', 'Europe', 'Japan'].map((o) => ({
-    label: o,
-    data: vehicles.filter(v => v.origin === o && v.mpg != null && v.weight != null).map(v => ({ x: v.weight, y: v.mpg })),
-    backgroundColor: colorFor(o),
-    pointRadius: 4
-  }));
+  // Memoize the expensive dataset calculation.
+  const datasets = useMemo(() => {
+    // Guard against rendering before the initial fetch is complete.
+    if (!allVehicles || allVehicles.length === 0) {
+      return [];
+    }
+    return ['USA', 'Europe', 'Japan'].map((o) => ({
+      label: o,
+      data: allVehicles.filter(v => v.origin === o && v.mpg != null && v.weight != null).map(v => ({ x: v.weight, y: v.mpg })),
+      backgroundColor: colorFor(o),
+      pointRadius: 4
+    }));
+  }, [allVehicles]); // This dependency array ensures the logic only runs when allVehicles changes.
 
   return (
     <div className="flex flex-col gap-6">

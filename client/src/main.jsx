@@ -5,6 +5,7 @@ import { QueryParamProvider } from 'use-query-params';
 import { ReactRouter6Adapter } from 'use-query-params/adapters/react-router-6';
 import App from './App.jsx';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext'; // Import AuthProvider
 
 // PrimeReact CSS Imports
 import 'primereact/resources/themes/lara-light-indigo/theme.css'; // or any other theme
@@ -17,7 +18,9 @@ createRoot(document.getElementById('root')).render(
   <BrowserRouter>
     <QueryParamProvider adapter={ReactRouter6Adapter}>
       <ThemeProvider>
-        <App />
+        <AuthProvider> {/* Add AuthProvider here */}
+          <App />
+        </AuthProvider>
       </ThemeProvider>
     </QueryParamProvider>
   </BrowserRouter>

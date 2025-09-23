@@ -1,9 +1,7 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
 import { vehicleApi } from '../api/vehicleApi';
 
 export const useVehicles = create(
-  persist(
     (set, get) => ({
       // State
       stats: null,
@@ -11,7 +9,7 @@ export const useVehicles = create(
       filteredVehicles: [],
       isLoading: true,
       error: null,
-      favorites: [],
+      favorites: [], // Will now store just IDs, fetched from DB
       favoriteDetails: [],
       isLoadingFavorites: false,
       page: 1,
@@ -27,18 +25,57 @@ export const useVehicles = create(
             vehicleApi.getVehicleNames(),
           ]);
           set({ stats: statsRes, vehicleNames: namesRes });
-          get().fetchFavoriteDetails();
         } catch (e) {
           console.error('Initialization failed', e);
           set({ isLoading: false, error: 'Failed to load initial data.' });
         }
       },
       
+      fetchUserFavorites: async (userId) => {
+        if (!userId) {
+          set({ favorites: [], favoriteDetails: [] });
+          return;
+        }
+        try {
+          set({ isLoadingFavorites: true });
+          const details = await vehicleApi.getFavorites(userId);
+          set({
+            favoriteDetails: details,
+            favorites: details.map(v => v.id), // Store just the IDs
+            isLoadingFavorites: false,
+          });
+        } catch (e) {
+          console.error('Failed to fetch user favorites', e);
+          set({ isLoadingFavorites: false });
+        }
+      },
+
+      toggleFavorite: async (vehicleId, userId) => {
+        const { favorites, fetchUserFavorites } = get();
+        const isFavorite = favorites.includes(vehicleId);
+
+        try {
+          if (isFavorite) {
+            await vehicleApi.removeFavorite(userId, vehicleId);
+          } else {
+            await vehicleApi.addFavorite(userId, vehicleId);
+          }
+          // Refetch favorites to ensure state is in sync with the DB
+          await fetchUserFavorites(userId);
+        } catch (e) {
+          console.error('Failed to toggle favorite', e);
+        }
+      },
+
+      clearFavorites: () => {
+        set({ favorites: [], favoriteDetails: [] });
+      },
+
+      // Other actions like fetchFilteredVehicles and fetchNextPage remain the same...
       fetchFilteredVehicles: async (filters) => {
         try {
           set({ isLoading: true, error: null, currentFilters: filters });
           const apiParams = { ...filters, page: 1, limit: 20 };
-          // This logic correctly converts arrays to strings
           for (const key in apiParams) {
             if (Array.isArray(apiParams[key])) {
               apiParams[key] = apiParams[key].join(',');
@@ -82,38 +119,5 @@ export const useVehicles = create(
           set({ isLoading: false, error: 'Failed to load more vehicles.' });
         }
       },
-      
-      fetchFavoriteDetails: async () => {
-        const { favorites } = get();
-        if (favorites.length === 0) {
-          set({ favoriteDetails: [] });
-          return;
-        }
-        try {
-          set({ isLoadingFavorites: true });
-          const details = await vehicleApi.getVehiclesByIds(favorites);
-          set({ favoriteDetails: details, isLoadingFavorites: false });
-        } catch (e) {
-          console.error('Failed to fetch favorite details', e);
-          set({ isLoadingFavorites: false });
-        }
-      },
-
-      toggleFavorite: (id) => {
-        const { favorites } = get();
-        const exists = favorites.includes(id);
-        const newFavorites = exists
-          ? favorites.filter((favId) => favId !== id)
-          : [...favorites, id];
-        
-        set({ favorites: newFavorites });
-        
-        get().fetchFavoriteDetails();
-      },
-    }),
-    {
-      name: 'wex-favorites',
-      partialize: (state) => ({ favorites: state.favorites }),
-    }
-  )
+    })
 );

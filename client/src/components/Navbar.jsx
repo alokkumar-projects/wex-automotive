@@ -2,6 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import ThemeToggler from './ThemeToggler';
+import { useAuth } from '../contexts/AuthContext';
 
 const link = ({ isActive }) =>
   clsx(
@@ -12,6 +13,8 @@ const link = ({ isActive }) =>
   );
 
 export default function Navbar() {
+  const { user, logout } = useAuth();
+
   return (
     <header className="border-b bg-white dark:bg-slate-800 dark:border-slate-700">
       <nav className="max-w-7xl mx-auto px-4 py-3 flex gap-2 items-center">
@@ -29,6 +32,20 @@ export default function Navbar() {
         <NavLink to="/about" className={link}>
           About
         </NavLink>
+        {user ? (
+          <button onClick={logout} className={link({ isActive: false })}>
+            Logout
+          </button>
+        ) : (
+          <>
+            <NavLink to="/login" className={link}>
+              Login
+            </NavLink>
+            <NavLink to="/signup" className={link}>
+              Sign Up
+            </NavLink>
+          </>
+        )}
       </nav>
     </header>
   );

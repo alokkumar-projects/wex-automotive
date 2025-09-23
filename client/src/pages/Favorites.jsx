@@ -2,19 +2,23 @@ import React, { useEffect } from 'react';
 import { useVehicles } from '../store/useVehicles.js';
 import VehicleCard from '../components/VehicleCard.jsx';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 export default function Favorites() {
   const { 
-    favorites, 
     favoriteDetails, 
-    fetchFavoriteDetails, 
+    fetchUserFavorites, 
     isLoadingFavorites 
   } = useVehicles();
+  
+  const { user } = useAuth();
 
-  // Fetch favorite details whenever the list of favorite IDs changes
+  // Fetch this user's favorites when the component mounts or the user changes
   useEffect(() => {
-    fetchFavoriteDetails();
-  }, [favorites, fetchFavoriteDetails]);
+    if (user) {
+      fetchUserFavorites(user.id);
+    }
+  }, [user, fetchUserFavorites]);
 
   if (isLoadingFavorites) {
     return <LoadingSpinner />;

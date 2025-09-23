@@ -8,7 +8,7 @@ const fastify = Fastify({ logger: true });
 await fastify.register(cors, { origin: true });
 
 // --- Database Connection & Service Instantiation ---
-const db = new sqlite3.Database('./db.sqlite', sqlite3.OPEN_READONLY, (err) => {
+const db = new sqlite3.Database('./db.sqlite', sqlite3.OPEN_READWRITE, (err) => {
   if (err) {
     fastify.log.error(err, 'Database connection failed');
     process.exit(1);
@@ -22,6 +22,29 @@ const vehicleService = new VehicleService(db);
 let statsCache = null;
 
 // --- API Route Definitions (v1) ---
+
+fastify.post('/api/v1/auth/register', async (request, reply) => {
+  try {
+    const { username, password } = request.body;
+    const user = await vehicleService.register(username, password);
+    return { success: true, userId: user.id };
+  } catch (err) {
+    request.log.error(err, 'Failed to register user');
+    reply.code(500).send({ error: 'Failed to register user' });
+  }
+});
+
+fastify.post('/api/v1/auth/login', async (request, reply) => {
+  try {
+    const { username, password } = request.body;
+    const user = await vehicleService.login(username, password);
+    return { success: true, user };
+  } catch (err) {
+    request.log.error(err, 'Failed to login user');
+    reply.code(401).send({ error: 'Invalid credentials' });
+  }
+});
+
 
 fastify.get('/api/v1/stats', async (request, reply) => {
   if (statsCache) {
@@ -106,6 +129,41 @@ fastify.get('/api/v1/vehicles/by-ids', async (request, reply) => {
     reply.code(500).send({ error: 'Failed to retrieve vehicles' });
   }
 });
+
+// --- User Favorites API Routes ---
+
+fastify.get('/api/v1/favorites/:userId', async (request, reply) => {
+    try {
+      const userId = Number(request.params.userId);
+      const favorites = await vehicleService.getFavorites(userId);
+      return favorites;
+    } catch (err) {
+      request.log.error(err, 'Failed to get favorites');
+      reply.code(500).send({ error: 'Failed to retrieve favorites' });
+    }
+  });
+  
+  fastify.post('/api/v1/favorites', async (request, reply) => {
+    try {
+      const { userId, vehicleId } = request.body;
+      await vehicleService.addFavorite(userId, vehicleId);
+      return { success: true };
+    } catch (err) {
+      request.log.error(err, 'Failed to add favorite');
+      reply.code(500).send({ error: 'Failed to add favorite' });
+    }
+  });
+  
+  fastify.delete('/api/v1/favorites', async (request, reply) => {
+    try {
+      const { userId, vehicleId } = request.body;
+      await vehicleService.removeFavorite(userId, vehicleId);
+      return { success: true };
+    } catch (err) {
+      request.log.error(err, 'Failed to remove favorite');
+      reply.code(500).send({ error: 'Failed to remove favorite' });
+    }
+  });
 
 // --- Server Start & Graceful Shutdown ---
 const start = async () => {

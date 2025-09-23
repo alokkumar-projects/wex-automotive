@@ -17,6 +17,14 @@ This diagram provides a comprehensive overview of the application's components, 
 
 <!-- end list -->
 
+### High-Level Architecture
+
+![High-Level Architecture](./docs/high-level-architecture.png)
+
+### Detailed Component Architecture
+
+![Detailed Component Architecture](./docs/detailed-component-architecture.png)
+
 ```mermaid
 graph TD
     subgraph "Local Filesystem / Data Source"

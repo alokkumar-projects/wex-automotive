@@ -1,68 +1,85 @@
-import React, { useRef, useCallback, useEffect } from 'react'; // Add useEffect here
+import React, { useRef, useEffect, useState } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import VehicleCard from './VehicleCard.jsx';
 import VehicleCardSkeleton from './VehicleCardSkeleton.jsx';
 
 export default function VirtualizedVehicleGrid({ filteredVehicles, fetchNextPage, hasMore, isLoading }) {
-  const parentRef = useRef();
+  const parentRef = useRef(null);
+  // Initialize columnCount to 0 to prevent rendering until it's calculated
+  const [columnCount, setColumnCount] = useState(0);
 
-  const count = hasMore ? filteredVehicles.length + 1 : filteredVehicles.length;
+  // Use an effect to responsively calculate the number of columns
+  useEffect(() => {
+    if (!parentRef.current) return;
 
-  const virtualizer = useVirtualizer({
+    const resizeObserver = new ResizeObserver(() => {
+      const width = parentRef.current.offsetWidth;
+      setColumnCount(Math.max(1, Math.floor(width / 300)));
+    });
+
+    resizeObserver.observe(parentRef.current);
+
+    return () => resizeObserver.disconnect();
+  }, []);
+
+  const rowCount = columnCount > 0 ? Math.ceil(filteredVehicles.length / columnCount) : 0;
+  const count = hasMore ? rowCount + 1 : rowCount;
+
+  const rowVirtualizer = useVirtualizer({
     count,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => 180, // Estimate the height of each row
+    estimateSize: () => 196,
     overscan: 5,
   });
 
-  const virtualItems = virtualizer.getVirtualItems();
+  const virtualRows = rowVirtualizer.getVirtualItems();
 
-  const lastItem = virtualItems[virtualItems.length - 1];
   useEffect(() => {
-    if (lastItem && lastItem.index >= filteredVehicles.length - 1 && hasMore && !isLoading) {
+    const lastItem = virtualRows[virtualRows.length - 1];
+    if (lastItem && lastItem.index >= rowCount - 1 && hasMore && !isLoading) {
       fetchNextPage();
     }
-  }, [lastItem, filteredVehicles.length, hasMore, isLoading, fetchNextPage]);
+  }, [virtualRows, rowCount, hasMore, isLoading, fetchNextPage]);
 
   return (
     <div ref={parentRef} className="w-full h-[calc(100vh-200px)] overflow-auto">
-      <div
-        style={{
-          height: `${virtualizer.getTotalSize()}px`,
-          width: '100%',
-          position: 'relative',
-        }}
-      >
+      {/* Only render the grid if the column count has been calculated */}
+      {columnCount > 0 && (
         <div
-          className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-2"
           style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
+            height: `${rowVirtualizer.getTotalSize()}px`,
             width: '100%',
-            transform: `translateY(${virtualItems[0]?.start ?? 0}px)`,
+            position: 'relative',
           }}
         >
-          {virtualItems.map((virtualItem) => {
-            const isLoaderRow = virtualItem.index > filteredVehicles.length - 1;
-            const vehicle = filteredVehicles[virtualItem.index];
-
+          {virtualRows.map((virtualRow) => {
+            const isLoaderRow = virtualRow.index >= rowCount;
+            
             return (
               <div
-                key={virtualItem.key}
-                data-index={virtualItem.index}
-                ref={virtualizer.measureElement}
+                key={virtualRow.key}
+                className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-2"
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
               >
-                {isLoaderRow ? (
-                  <VehicleCardSkeleton />
-                ) : (
-                  <VehicleCard v={vehicle} />
-                )}
+                {isLoaderRow
+                  ? Array.from({ length: columnCount }).map((_, i) => <VehicleCardSkeleton key={i} />)
+                  : filteredVehicles
+                      .slice(
+                        virtualRow.index * columnCount,
+                        virtualRow.index * columnCount + columnCount
+                      )
+                      .map((vehicle) => <VehicleCard key={vehicle.id} v={vehicle} />)}
               </div>
             );
           })}
         </div>
-      </div>
+      )}
     </div>
   );
 }

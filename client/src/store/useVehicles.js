@@ -13,21 +13,14 @@ export const useVehicles = create(
       favorites: [],
       page: 1,
       hasMore: true,
-      currentFilters: {}, // Keep track of the current filters
+      currentFilters: {},
 
       // Actions
       initialize: async () => {
         try {
           set({ isLoading: true, error: null });
-          const [statsRes] = await Promise.all([
-            vehicleApi.getStats(),
-          ]);
-
-          set({
-            stats: statsRes,
-            isLoading: false,
-          });
-          get().fetchFilteredVehicles({}, true); // Initial fetch
+          const statsRes = await vehicleApi.getStats();
+          set({ stats: statsRes });
         } catch (e) {
           console.error('Initialization failed', e);
           set({ isLoading: false, error: 'Failed to load vehicle data.' });
@@ -48,7 +41,7 @@ export const useVehicles = create(
           set({
             filteredVehicles: vehiclesRes,
             isLoading: false,
-            page: 2, // The next page to fetch will be page 2
+            page: 2,
             hasMore: vehiclesRes.length > 0,
           });
         } catch (e) {
@@ -58,6 +51,7 @@ export const useVehicles = create(
       },
 
       fetchNextPage: async () => {
+        // This is the line that was fixed
         const { page, hasMore, isLoading, currentFilters } = get();
         if (isLoading || !hasMore) return;
 

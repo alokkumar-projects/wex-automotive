@@ -1,23 +1,24 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useVehicles } from '../store/useVehicles.js';
-import { useAuth } from '../contexts/AuthContext.jsx'; // Import useAuth
+import { useAuth } from '../contexts/AuthContext.jsx';
 
+// This function is now self-contained within the component
 const originBadge = (origin) => {
-  // ... (code is the same)
+  const map = { USA: 'bg-blue-600', Europe: 'bg-green-600', Japan: 'bg-red-600' };
+  return map[origin] || 'bg-slate-600';
 };
 
 export default function VehicleCard({ v }) {
   const { favorites, toggleFavorite } = useVehicles();
-  const { user } = useAuth(); // Get the current user
+  const { user } = useAuth();
 
-  const fav = favorites.includes(v.id);
+  const isFavorite = favorites.includes(v.id);
 
   const handleToggleFavorite = () => {
     if (user) {
       toggleFavorite(v.id, user.id);
     } else {
-      // Optional: redirect to login or show a message
       alert('Please log in to add favorites.');
     }
   };
@@ -28,7 +29,7 @@ export default function VehicleCard({ v }) {
         <span className={`text-white text-xs px-2 py-1 rounded ${originBadge(v.origin)}`}>{v.origin}</span>
         <button
           onClick={handleToggleFavorite}
-          className={`text-sm ${fav ? 'text-yellow-500' : 'text-slate-400'} hover:text-yellow-600`}
+          className={`text-sm ${isFavorite ? 'text-yellow-500' : 'text-slate-400'} hover:text-yellow-600`}
           title="Toggle favorite"
         >
           ★

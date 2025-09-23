@@ -96,4 +96,9 @@ export class VehicleService {
   async getAllForStats() {
     return this._dbAll('SELECT * FROM vehicles');
   }
+
+  async getScatterPlotData() {
+    // Select only the necessary columns for the chart
+    return this._dbAll('SELECT weight, mpg, origin FROM vehicles');
+  }
 }

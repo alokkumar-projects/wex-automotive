@@ -63,6 +63,18 @@ fastify.get('/api/v1/vehicles/:id', async (request, reply) => {
   }
 });
 
+// Add this new route definition
+
+fastify.get('/api/v1/vehicles/scatter-plot', async (request, reply) => {
+  try {
+    const data = await vehicleService.getScatterPlotData();
+    return data;
+  } catch (err) {
+    request.log.error(err, 'Failed to get scatter plot data');
+    reply.code(500).send({ error: 'Failed to retrieve scatter plot data' });
+  }
+});
+
 // --- Server Start & Graceful Shutdown ---
 const start = async () => {
   try {

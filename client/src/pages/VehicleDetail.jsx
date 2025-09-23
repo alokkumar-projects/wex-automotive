@@ -13,10 +13,10 @@ function physicsForAcceleration(acc) {
 
 export default function VehicleDetail() {
   const { id } = useParams();
-  const { vehicles } = useVehicles();
+  const { allVehicles } = useVehicles();
 
   // Note: This will only find a vehicle if it's in the currently filtered list.
-  const v = useMemo(() => vehicles.find(x => x.id === Number(id)), [vehicles, id]);
+  const v = useMemo(() => allVehicles.find(x => x.id === Number(id)), [vehicles, id]);
 
   const mx = useMotionValue(0);
   const my = useMotionValue(0);

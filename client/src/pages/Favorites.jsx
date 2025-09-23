@@ -3,10 +3,9 @@ import { useVehicles } from '../store/useVehicles.js';
 import VehicleCard from '../components/VehicleCard.jsx';
 
 export default function Favorites() {
-  const { favorites, vehicles } = useVehicles();
+  const { favorites, allVehicles } = useVehicles();
 
-  // Note: This will only show favorites that are present in the currently filtered list of vehicles.
-  const favs = vehicles.filter(v => favorites.includes(v.id));
+  const favs = allVehicles.filter(v => favorites.includes(v.id));
 
   return (
     <div className="flex flex-col gap-4">

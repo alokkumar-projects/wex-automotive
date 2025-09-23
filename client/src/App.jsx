@@ -9,10 +9,9 @@ import About from './pages/About.jsx';
 import { useVehicles } from './store/useVehicles.js';
 
 export default function App() {
-  // Fetch initial data on app load
+  // Fetch all initial data on app load
   useEffect(() => {
-    useVehicles.getState().fetchStats();
-    useVehicles.getState().fetchVehicles();
+    useVehicles.getState().initialize();
   }, []);
 
   return (

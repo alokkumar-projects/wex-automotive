@@ -6,7 +6,7 @@ const API_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5175').
 const api = (path) => `${API_BASE}${path.startsWith('/') ? path : `/${path}`}`;
 
 const debouncedFetch = debounce((get) => {
-  get().fetchVehicles();
+  get().fetchFilteredVehicles();
 }, 300);
 
 export const useVehicles = create(
@@ -14,10 +14,11 @@ export const useVehicles = create(
     (set, get) => ({
       // Data
       stats: null,
-      vehicles: [],
+      allVehicles: [], // Master list for lookups
+      filteredVehicles: [], // List for the gallery
       error: null,
       
-      // UI State - Restore the full filter object with safe defaults
+      // UI State
       filters: {
         origins: [],
         cylinders: [],
@@ -33,14 +34,19 @@ export const useVehicles = create(
       favorites: [],
 
       // Actions
-      fetchStats: async () => {
+      initialize: async () => {
         try {
-          const statsRes = await fetch(api('/api/stats')).then(r => r.json());
-          // When stats are fetched, initialize the filter ranges to the max range
+          const [statsRes, allVehiclesRes] = await Promise.all([
+            fetch(api('/api/stats')).then(r => r.json()),
+            fetch(api('/api/vehicles')).then(r => r.json()) // Fetch all vehicles once
+          ]);
+
           set(state => ({
             stats: statsRes,
+            allVehicles: allVehiclesRes,
+            filteredVehicles: allVehiclesRes, // Initially, filtered is the same as all
             filters: {
-              ...state.filters, // Keep discrete filters
+              ...state.filters,
               mpg: statsRes.mpgRange.map(v => v ?? 0),
               weight: statsRes.weightRange.map(v => v ?? 0),
               horsepower: statsRes.horsepowerRange.map(v => v ?? 0),
@@ -50,12 +56,12 @@ export const useVehicles = create(
             }
           }));
         } catch (e) {
-          console.error('fetchStats failed', e);
+          console.error('Initialization failed', e);
           set({ error: String(e) });
         }
       },
 
-      fetchVehicles: async () => {
+      fetchFilteredVehicles: async () => {
         const { filters, searchTerm, sortConfig } = get();
         const params = new URLSearchParams();
 
@@ -63,13 +69,12 @@ export const useVehicles = create(
         if (filters.origins.length) params.set('origins', filters.origins.join(','));
         if (filters.cylinders.length) params.set('cylinders', filters.cylinders.join(','));
         
-        // Send range filters to the API
-        if (filters.mpg) { params.set('mpg', filters.mpg.join(',')); }
-        if (filters.weight) { params.set('weight', filters.weight.join(',')); }
-        if (filters.horsepower) { params.set('horsepower', filters.horsepower.join(',')); }
-        if (filters.displacement) { params.set('displacement', filters.displacement.join(',')); }
-        if (filters.acceleration) { params.set('acceleration', filters.acceleration.join(',')); }
-        if (filters.modelYear) { params.set('modelYear', filters.modelYear.join(',')); }
+        if (filters.mpg) params.set('mpg', filters.mpg.join(','));
+        if (filters.weight) params.set('weight', filters.weight.join(','));
+        if (filters.horsepower) params.set('horsepower', filters.horsepower.join(','));
+        if (filters.displacement) params.set('displacement', filters.displacement.join(','));
+        if (filters.acceleration) params.set('acceleration', filters.acceleration.join(','));
+        if (filters.modelYear) params.set('modelYear', filters.modelYear.join(','));
 
         if (sortConfig.key) {
           params.set('sortBy', sortConfig.key);
@@ -78,9 +83,9 @@ export const useVehicles = create(
 
         try {
           const vehiclesRes = await fetch(api(`/api/vehicles?${params.toString()}`)).then(r => r.json());
-          set({ vehicles: vehiclesRes, error: null });
+          set({ filteredVehicles: vehiclesRes, error: null });
         } catch (e) {
-          console.error('fetchVehicles failed', e);
+          console.error('fetchFilteredVehicles failed', e);
           set({ error: String(e) });
         }
       },
@@ -92,17 +97,16 @@ export const useVehicles = create(
 
       setFilter: (key, value) => {
         set((s) => ({ filters: { ...s.filters, [key]: value } }));
-        // For range sliders, debounce. For checkboxes, it's ok to be instant.
         if (Array.isArray(value) && value.length === 2) {
           debouncedFetch(get);
         } else {
-          get().fetchVehicles();
+          get().fetchFilteredVehicles();
         }
       },
       
       setSortConfig: (cfg) => {
         set({ sortConfig: cfg });
-        get().fetchVehicles();
+        get().fetchFilteredVehicles();
       },
 
       toggleFavorite: (id) => {

@@ -3,161 +3,96 @@
 This is a full-stack web application that allows users to explore a rich dataset of automotive information from 1970-1982. The application is architected with a modern stack, featuring a React frontend and a Fastify backend server, both containerized with Docker for easy setup and deployment.
 
 **Live Production URLs**
-Frontend (Vercel): [https://wex-automotive.vercel.app](https://wex-automotive.vercel.app)
-Backend (Render): [https://wex-automotive-server.onrender.com](https://wex-automotive-server.onrender.com)
+
+- **Frontend (Vercel):** [https://wex-automotive.vercel.app](https://wex-automotive.vercel.app)
+- **Backend (Render):** [https://wex-automotive-server.onrender.com]
+  (https://wex-automotive-server.onrender.com)
 
 ---
 
 ## Architecture & Design
 
-### High-Level Design (HLD)
+This application is designed with two distinct environments in mind: a cloud-native setup for production and a containerized setup for local development.
 
-This diagram provides a comprehensive overview of the application's components, data flow, and infrastructure. The system is entirely containerized using Docker Compose, creating a clear separation between the client-side and server-side services.
+### Production Architecture (Vercel & Render)
+
+The live application is deployed across specialized cloud platforms for optimal performance and scalability. The frontend is hosted on **Vercel**, a platform optimized for static site hosting and serverless functions, while the backend API and its database are hosted on **Render**.
 
 ```mermaid
 graph TD
-    subgraph "User's Browser"
-        A[fa:fa-react React SPA]
+    subgraph "User"
+        A[<i class='fa fa-user'></i> User's Browser]
     end
 
-    subgraph "Docker Environment (Orchestrated by Docker Compose)"
-        subgraph "Client Service (Port 5173)"
-            B[fa:fa-server Nginx Web Server]
+    subgraph "Production Environment"
+        subgraph "Vercel Platform"
+            B[<i class='fa fa-react'></i> React SPA Frontend<br/>(wex-automotive.vercel.app)]
         end
 
-        subgraph "Server Service (Port 5175)"
-            C[fa:fa-node-js Fastify API Server]
-            D_DB[fa:fa-database SQLite Database]
-            C <--> D_DB
+        subgraph "Render Platform"
+            C[<i class='fa fa-node-js'></i> Fastify API Server<br/>(wex-automotive-server.onrender.com)]
+            D[<i class='fa fa-database'></i> Production Database<br/>(e.g., Render PostgreSQL)]
+            C <--> D
         end
     end
 
-    subgraph "Local Filesystem / Data Source"
-        E[fa:fa-file-csv auto-mpg.csv] -- "1. Parsed by" --> F((db/seed.js))
-        F -- "2. Populates" --> D_Vol[fa:fa-database db.sqlite Volume]
+    subgraph "One-Time Data Seeding"
+        E[<i class='fa fa-file-csv'></i> auto-mpg.csv] --> F((db/seed.js))
+        F -- "Populates" --> D
     end
 
-    B -- "3. Serves Static HTML/CSS/JS" --> A
-    A -- "4. API Request (e.g., GET /api/v1/vehicles)" --> C
-    C -- "5. Returns Vehicle Data (JSON)" --> A
-    A -- "6. API Request (e.g., POST /api/v1/auth/login)" --> C
-    C -- "7. Returns User Data (JSON)" --> A
-    D_Vol -- "Mounted Into Container" --> D_DB
+    A -- "Views Site" --> B
+    B -- "API Calls" --> C
 
-    style E fill:#2d8,stroke:#333,stroke-width:2px
-    style D_Vol fill:#f9f,stroke:#333,stroke-width:2px
+    classDef vercel fill:#f2f2f2,stroke:#000,stroke-width:2px;
+    classDef render fill:#e6f9f0,stroke:#46a36c,stroke-width:2px;
+    class B vercel;
+    class C,D render;
 ```
 
-**Data Flow & Lifecycle:**
+**Data Flow:**
 
-1.  **Build/Seed Time**: The process begins with the raw `auto-mpg.csv` data file. A Node.js script (`db/seed.js`) is executed manually (`npm run db:seed`) to parse this file, clean the data, and populate a persistent **SQLite database file (`db.sqlite`)**.
-2.  **Runtime**: When a user accesses the application, their browser receives a production-built React single-page application, served statically by an **Nginx** web server running in the `client` container.
-3.  **Interaction**: The React application, running in the user's browser, makes API calls to the backend.
-4.  **API & Database**: The **Fastify** server receives these API requests, queries the pre-populated SQLite database for the relevant vehicle data, and returns it to the client as a JSON payload. The SQLite database file is mounted into the server container via a Docker volume, ensuring data persistence.
+1.  **Deployment:** When the `main` branch is pushed, Vercel and Render automatically build and deploy the latest versions of the frontend and backend, respectively.
+2.  **Data Seeding:** The production database on Render is populated once using the `db/seed.js` script, which processes the `auto-mpg.csv` data.
+3.  **User Interaction:** A user visits the Vercel URL, loading the React application. The app then makes API calls to the backend service hosted on Render to fetch vehicle data.
 
----
+### Local Development Architecture (Docker Compose)
 
-### Low-Level Design (LLD)
-
-#### Component Diagrams
-
-This provides a more detailed look at the internal components of the client and server applications.
-
-**Client (Frontend)**
+For local development, the entire application is orchestrated using **Docker Compose**. This creates a consistent and isolated environment that mirrors the separated services of production but is easy to manage on a local machine.
 
 ```mermaid
-graph TD;
-    subgraph Client Application
-        A[App.jsx] --> B{React Router};
-        B --> C[Dashboard Page];
-        B --> D[Gallery Page];
-        B --> E[Vehicle Detail Page];
-        B --> L[Login Page];
-        B --> M[Signup Page];
-        B --> N[Favorites Page];
+graph TD
+    subgraph "Developer's Machine"
+        A[<i class='fa fa-user'></i> Browser @ localhost:5173]
 
-        F["useVehicles.js Store <br/>(Zustand)"] --> G(Global State);
-        C --> G;
-        D --> G;
-        E --> G;
-        N --> G;
+        subgraph "Docker Environment (Orchestrated by Docker Compose)"
+            subgraph "Client Service (Port 5173)"
+                B[<i class='fa fa-server'></i> Nginx Server]
+            end
 
-        H[vehicleApi.js] --> I("API Requests <br/> Axios");
-        F --> H;
+            subgraph "Server Service (Port 5175)"
+                C[<i class='fa fa-node-js'></i> Fastify Server]
+                D[<i class='fa fa-database'></i> SQLite Database]
+                C <--> D
+            end
+        end
 
-        J[AuthContext.jsx] --> K(User State);
-        A --> K;
-        L --> K;
-        M --> K;
+        subgraph "Local Filesystem"
+             E[<i class='fa fa-file'></i> db.sqlite file]
+        end
     end
+
+    A -- "Views App" --> B
+    B -- "Proxies API calls to" --> C
+    E -- "Mounted as a Volume into" --> D
 ```
 
-**Server (Backend)**
+**Data Flow:**
 
-```mermaid
-graph TD;
-    subgraph Server Application
-        A[server.js] --> B{API Routes};
-        B --> C[vehicleService.js];
-        C --> D{db.sqlite};
-        E[db/seed.js] -- populates --> D;
-    end
-```
-
----
-
-#### Web Sequence Diagrams
-
-**User Login Sequence**
-
-This diagram illustrates the flow of a user logging into the application.
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Login Page (React)
-    participant AuthContext
-    participant vehicleApi.js
-    participant Server (Fastify)
-    participant Database (SQLite)
-
-    User->>Login Page (React): Enters credentials and clicks "Login"
-    Login Page (React)->>AuthContext: calls login(username, password)
-    AuthContext->>vehicleApi.js: login(username, password)
-    vehicleApi.js->>Server (Fastify): POST /api/v1/auth/login
-    Server (Fastify)->>Database (SQLite): SELECT * FROM users WHERE username = ?
-    Database (SQLite)-->>Server (Fastify): Returns user record
-    Server (Fastify)-->>vehicleApi.js: Returns user object
-    vehicleApi.js->>AuthContext: Returns user data
-    AuthContext->>Login Page (React): Updates user state, redirects to dashboard
-```
-
-**Filtering Vehicles Sequence**
-
-This diagram illustrates the flow of a common user action: applying a filter in the vehicle gallery.
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant FilterPanel (React)
-    participant Gallery (React)
-    participant Zustand Store
-    participant vehicleApi.js
-    participant Server (Fastify)
-    participant Database (SQLite)
-
-    User->>FilterPanel: Selects a filter (e.g., clicks 'Japan')
-    FilterPanel->>Gallery (React): Updates URL query parameters
-    Gallery (React)->>Zustand Store: Calls fetchFilteredVehicles(filters)
-    Zustand Store->>vehicleApi.js: getVehicles(filters)
-    vehicleApi.js->>Server (Fastify): GET /api/v1/vehicles?origins=Japan
-    Server (Fastify)->>Database (SQLite): Queries with filter conditions
-    Database (SQLite)-->>Server (Fastify): Returns filtered vehicle data
-    Server (Fastify)-->>vehicleApi.js: Returns JSON response
-    vehicleApi.js->>Zustand Store: Returns data
-    Zustand Store->>Gallery (React): Updates 'filteredVehicles' state
-    Gallery (React)-->>User: Re-renders to display filtered vehicles
-```
+1.  **Data Seeding:** The developer runs `npm run db:seed` in the `server` directory, which creates a local `db.sqlite` file.
+2.  **Docker Compose:** `docker-compose up` builds and starts the client and server containers.
+3.  **Volume Mount:** The local `db.sqlite` file is mounted as a volume into the server container, making the data accessible to the Fastify API.
+4.  **User Interaction:** The developer accesses `http://localhost:5173`. The React app, served by Nginx, makes API calls that are proxied to the Fastify server at `http://localhost:5175`.
 
 ---
 

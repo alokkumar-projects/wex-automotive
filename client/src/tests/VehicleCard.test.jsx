@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { BrowserRouter } from 'react-router-dom';
-import VehicleCard from './VehicleCard.jsx';
+import VehicleCard from '../components/VehicleCard.jsx'; // Corrected import path
 
 // Mock the zustand store
 vi.mock('../store/useVehicles.js', () => ({

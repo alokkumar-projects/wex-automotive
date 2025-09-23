@@ -1,59 +1,77 @@
+---
 # WEX Automotive Data Explorer
 
-This is a full-stack web application that allows users to explore a rich dataset of automotive information from 1970-1982. The application is architected with a modern stack, featuring a React frontend and a Fastify backend server, both containerized with Docker for easy setup and deployment.
+This is a full-stack web application that allows users to explore a rich dataset of automotive information from 1970–1982. The application is architected with a modern stack, featuring a React frontend and a Fastify backend server, both containerized with Docker for easy setup and deployment.
 
 **Live Production URLs**
-Frontend (Vercel): [https://wex-automotive.vercel.app](https://wex-automotive.vercel.app)
-Backend (Render): [https://wex-automotive-server.onrender.com](https://wex-automotive-server.onrender.com)
 
+- **Frontend (Vercel):** [https://wex-automotive.vercel.app](https://wex-automotive.vercel.app)
+- **Backend (Render):** [https://wex-automotive-server.onrender.com](https://wex-automotive-server.onrender.com)
 ---
 
 ## Architecture & Design
 
-### High-Level Design (HLD)
+This application is designed with two distinct environments in mind: a cloud-native setup for production and a containerized setup for local development.
 
-This diagram provides a comprehensive overview of the application's components, data flow, and infrastructure. The system is entirely containerized using Docker Compose, creating a clear separation between the client-side and server-side services.
+### Production Architecture (Vercel & Render)
 
 ```mermaid
 graph TD
-    subgraph "User's Browser"
-        A[fa:fa-react React SPA]
+    subgraph "User"
+        A[User's Browser]
     end
 
-    subgraph "Docker Environment (Orchestrated by Docker Compose)"
-        subgraph "Client Service (Port 5173)"
-            B[fa:fa-server Nginx Web Server]
+    subgraph "Production Environment"
+        subgraph "Vercel Platform"
+            B[React SPA Frontend\nwex-automotive.vercel.app]
         end
 
-        subgraph "Server Service (Port 5175)"
-            C[fa:fa-node-js Fastify API Server]
-            D_DB[fa:fa-database SQLite Database]
-            C <--> D_DB
+        subgraph "Render Platform"
+            C[Fastify API Server\nwex-automotive-server.onrender.com]
+            D[Production Database\nRender PostgreSQL]
+            C <--> D
         end
     end
 
-    subgraph "Local Filesystem / Data Source"
-        E[fa:fa-file-csv auto-mpg.csv] -- "1. Parsed by" --> F((db/seed.js))
-        F -- "2. Populates" --> D_Vol[fa:fa-database db.sqlite Volume]
+    subgraph "One-Time Data Seeding"
+        E[auto-mpg.csv] --> F((db/seed.js))
+        F -- "Populates" --> D
     end
 
-    B -- "3. Serves Static HTML/CSS/JS" --> A
-    A -- "4. API Request (e.g., GET /api/v1/vehicles)" --> C
-    C -- "5. Returns Vehicle Data (JSON)" --> A
-    A -- "6. API Request (e.g., POST /api/v1/auth/login)" --> C
-    C -- "7. Returns User Data (JSON)" --> A
-    D_Vol -- "Mounted Into Container" --> D_DB
-
-    style E fill:#2d8,stroke:#333,stroke-width:2px
-    style D_Vol fill:#f9f,stroke:#333,stroke-width:2px
+    A -- "Views Site" --> B
+    B -- "API Calls" --> C
 ```
 
-**Data Flow & Lifecycle:**
+---
 
-1.  **Build/Seed Time**: The process begins with the raw `auto-mpg.csv` data file. A Node.js script (`db/seed.js`) is executed manually (`npm run db:seed`) to parse this file, clean the data, and populate a persistent **SQLite database file (`db.sqlite`)**.
-2.  **Runtime**: When a user accesses the application, their browser receives a production-built React single-page application, served statically by an **Nginx** web server running in the `client` container.
-3.  **Interaction**: The React application, running in the user's browser, makes API calls to the backend.
-4.  **API & Database**: The **Fastify** server receives these API requests, queries the pre-populated SQLite database for the relevant vehicle data, and returns it to the client as a JSON payload. The SQLite database file is mounted into the server container via a Docker volume, ensuring data persistence.
+### Local Development Architecture (Docker Compose)
+
+```mermaid
+graph TD
+    subgraph "Developer's Machine"
+        A[Browser @ localhost:5173]
+
+        subgraph "Docker Environment (Docker Compose)"
+            subgraph "Client Service (Port 5173)"
+                B[Nginx Server]
+            end
+
+            subgraph "Server Service (Port 5175)"
+                C[Fastify Server]
+                D[SQLite Database]
+                C <--> D
+            end
+        end
+
+        subgraph "Local Filesystem"
+             E[db.sqlite file]
+        end
+    end
+
+    A -- "Views App" --> B
+    B -- "Proxies API calls" --> C
+    E -- "Mounted as Volume" --> D
+```
 
 ---
 
@@ -61,46 +79,44 @@ graph TD
 
 #### Component Diagrams
 
-This provides a more detailed look at the internal components of the client and server applications.
-
 **Client (Frontend)**
 
 ```mermaid
-graph TD;
+graph TD
     subgraph Client Application
-        A[App.jsx] --> B{React Router};
-        B --> C[Dashboard Page];
-        B --> D[Gallery Page];
-        B --> E[Vehicle Detail Page];
-        B --> L[Login Page];
-        B --> M[Signup Page];
-        B --> N[Favorites Page];
+        A[App.jsx] --> B{React Router}
+        B --> C[Dashboard Page]
+        B --> D[Gallery Page]
+        B --> E[Vehicle Detail Page]
+        B --> L[Login Page]
+        B --> M[Signup Page]
+        B --> N[Favorites Page]
 
-        F["useVehicles.js Store <br/>(Zustand)"] --> G(Global State);
-        C --> G;
-        D --> G;
-        E --> G;
-        N --> G;
+        F["useVehicles.js Store\n(Zustand)"] --> G(Global State)
+        C --> G
+        D --> G
+        E --> G
+        N --> G
 
-        H[vehicleApi.js] --> I("API Requests <br/> Axios");
-        F --> H;
+        H[vehicleApi.js] --> I(API Requests via Axios)
+        F --> H
 
-        J[AuthContext.jsx] --> K(User State);
-        A --> K;
-        L --> K;
-        M --> K;
+        J[AuthContext.jsx] --> K(User State)
+        A --> K
+        L --> K
+        M --> K
     end
 ```
 
 **Server (Backend)**
 
 ```mermaid
-graph TD;
+graph TD
     subgraph Server Application
-        A[server.js] --> B{API Routes};
-        B --> C[vehicleService.js];
-        C --> D{db.sqlite};
-        E[db/seed.js] -- populates --> D;
+        A[server.js] --> B{API Routes}
+        B --> C[vehicleService.js]
+        C --> D{db.sqlite}
+        E[db/seed.js] -- "populates" --> D
     end
 ```
 
@@ -109,8 +125,6 @@ graph TD;
 #### Web Sequence Diagrams
 
 **User Login Sequence**
-
-This diagram illustrates the flow of a user logging into the application.
 
 ```mermaid
 sequenceDiagram
@@ -121,20 +135,18 @@ sequenceDiagram
     participant Server (Fastify)
     participant Database (SQLite)
 
-    User->>Login Page (React): Enters credentials and clicks "Login"
-    Login Page (React)->>AuthContext: calls login(username, password)
+    User->>Login Page (React): Enters credentials
+    Login Page (React)->>AuthContext: login(username, password)
     AuthContext->>vehicleApi.js: login(username, password)
     vehicleApi.js->>Server (Fastify): POST /api/v1/auth/login
-    Server (Fastify)->>Database (SQLite): SELECT * FROM users WHERE username = ?
-    Database (SQLite)-->>Server (Fastify): Returns user record
-    Server (Fastify)-->>vehicleApi.js: Returns user object
-    vehicleApi.js->>AuthContext: Returns user data
-    AuthContext->>Login Page (React): Updates user state, redirects to dashboard
+    Server (Fastify)->>Database (SQLite): SELECT user
+    Database (SQLite)-->>Server (Fastify): User record
+    Server (Fastify)-->>vehicleApi.js: User object
+    vehicleApi.js->>AuthContext: User data
+    AuthContext->>Login Page (React): Update state, redirect
 ```
 
 **Filtering Vehicles Sequence**
-
-This diagram illustrates the flow of a common user action: applying a filter in the vehicle gallery.
 
 ```mermaid
 sequenceDiagram
@@ -146,60 +158,56 @@ sequenceDiagram
     participant Server (Fastify)
     participant Database (SQLite)
 
-    User->>FilterPanel: Selects a filter (e.g., clicks 'Japan')
-    FilterPanel->>Gallery (React): Updates URL query parameters
-    Gallery (React)->>Zustand Store: Calls fetchFilteredVehicles(filters)
+    User->>FilterPanel: Selects filter
+    FilterPanel->>Gallery (React): Update query params
+    Gallery (React)->>Zustand Store: fetchFilteredVehicles(filters)
     Zustand Store->>vehicleApi.js: getVehicles(filters)
     vehicleApi.js->>Server (Fastify): GET /api/v1/vehicles?origins=Japan
-    Server (Fastify)->>Database (SQLite): Queries with filter conditions
-    Database (SQLite)-->>Server (Fastify): Returns filtered vehicle data
-    Server (Fastify)-->>vehicleApi.js: Returns JSON response
-    vehicleApi.js->>Zustand Store: Returns data
-    Zustand Store->>Gallery (React): Updates 'filteredVehicles' state
-    Gallery (React)-->>User: Re-renders to display filtered vehicles
+    Server (Fastify)->>Database (SQLite): Query with filters
+    Database (SQLite)-->>Server (Fastify): Results
+    Server (Fastify)-->>vehicleApi.js: JSON response
+    vehicleApi.js->>Zustand Store: Data
+    Zustand Store->>Gallery (React): Update state
+    Gallery (React)-->>User: Show filtered vehicles
 ```
 
 ---
 
 ## Getting Started
 
-To get the application up and running on your local machine, follow these simple steps.
-
 ### Prerequisites
 
-- [Node.js](https://nodejs.org/) (version 18 or higher)
-- [npm](https://www.npmjs.com/) (usually comes with Node.js)
+- [Node.js](https://nodejs.org/) (v18+)
+- [npm](https://www.npmjs.com/)
 - [Docker](https://www.docker.com/) & Docker Compose
 
 ### Installation & Running
 
-1.  **Clone the repository:**
+1. **Clone the repository**
 
-    ```bash
-    git clone https://github.com/alokkumar-projects/wex-automotive.git
-    cd wex-automotive
-    git fetch origin
-    git checkout feature/wex-automative-explorer
-    ```
+   ```bash
+   git clone https://github.com/alokkumar-projects/wex-automotive.git
+   cd wex-automotive
+   git fetch origin
+   git checkout feature/wex-automative-explorer
+   ```
 
-2.  **Seed the Database:**
-    Before running the application, you need to populate the database from the source CSV file.
+2. **Seed the database**
 
-    ```bash
-    cd server
-    npm install
-    npm run db:seed
-    cd ..
-    ```
+   ```bash
+   cd server
+   npm install
+   npm run db:seed
+   cd ..
+   ```
 
-3.  **Run with Docker Compose:**
-    This is the recommended way to run the application as it orchestrates both the client and server containers.
+3. **Run with Docker Compose**
 
-    ```bash
-    docker-compose up --build
-    ```
+   ```bash
+   docker-compose up --build
+   ```
 
-    The `--build` flag ensures that the Docker images are built before starting. The application will be available at `http://localhost:5173`.
+   App runs at **[http://localhost:5173](http://localhost:5173)**.
 
 ---
 
@@ -207,47 +215,46 @@ To get the application up and running on your local machine, follow these simple
 
 ### Frontend (Client)
 
-- **User Authentication**: Full login and signup functionality, enabling personalized experiences.
-- **Interactive Dashboard**: A scatter plot visualization showing the relationship between vehicle weight and MPG, color-coded by origin.
-- **Dynamic Gallery & Filtering**: A gallery of all vehicles with a powerful filtering panel. Users can filter by name, origin, cylinders, and various numeric ranges (MPG, Weight, etc.).
-- **Data Sorting**: The gallery can be sorted by multiple attributes like MPG, weight, and model year.
-- **Vehicle Detail Page**: A dedicated page for each vehicle with a data-driven parallax effect where the animation is influenced by the car's acceleration value.
-- **Favorites**: Authenticated users can mark vehicles as favorites, and this state is persisted in the database.
-- **Responsive Design**: The application is fully responsive, built with **Tailwind CSS**.
-- **Light/Dark Theme**: The application supports both light and dark themes, with the theme being persisted in local storage.
+- User authentication (login/signup)
+- Interactive dashboard (scatter plot by MPG vs. weight, color-coded by origin)
+- Gallery with advanced filtering & sorting
+- Vehicle detail pages with parallax animation
+- Favorites management (persisted in DB)
+- Responsive, themeable UI (Tailwind, light/dark modes)
 
 ### Backend (Server)
 
-- **Efficient RESTful API**: Built with Fastify to serve cleaned and structured vehicle data and pre-calculated statistics.
-- **User Authentication**: Endpoints for user registration and login.
-- **Favorites Management**: API endpoints for users to manage their favorite vehicles.
-- **Data Processing**: The server reads from a tab-separated `auto-mpg.csv`, handles missing values, and normalizes headers before populating the database.
+- RESTful API (Fastify)
+- Authentication endpoints
+- Favorites management
+- Data ingestion from `auto-mpg.csv`
+- Normalized database schema
 
 ---
 
 ## Technology Stack
 
-| Area         | Technology                                                                                                          |
-| :----------- | :------------------------------------------------------------------------------------------------------------------ |
-| **Frontend** | React, Vite, Zustand (for state management), React Router, Tailwind CSS, Chart.js, Framer Motion, Axios, PrimeReact |
-| **Backend**  | Node.js, Fastify, SQLite3                                                                                           |
-| **DevOps**   | Docker, Docker Compose                                                                                              |
-| **Testing**  | Vitest, React Testing Library                                                                                       |
+| Area         | Technology                                                                                   |
+| ------------ | -------------------------------------------------------------------------------------------- |
+| **Frontend** | React, Vite, Zustand, React Router, Tailwind CSS, Chart.js, Framer Motion, Axios, PrimeReact |
+| **Backend**  | Node.js, Fastify, SQLite3                                                                    |
+| **DevOps**   | Docker, Docker Compose                                                                       |
+| **Testing**  | Vitest, React Testing Library                                                                |
 
 ---
 
 ## API Endpoints
 
-The server exposes the following endpoints:
+- `POST /api/v1/auth/register` – Register user
+- `POST /api/v1/auth/login` – Login user
+- `GET /api/v1/vehicles` – List vehicles (with filters/sorting)
+- `GET /api/v1/vehicles/:id` – Single vehicle by ID
+- `GET /api/v1/stats` – Statistics & metadata
+- `GET /api/v1/vehicles/scatter-plot` – Data for dashboard scatter plot
+- `GET /api/v1/vehicles/names` – Vehicle names (autocomplete)
+- `GET /api/v1/vehicles/by-ids` – Vehicles by ID list (favorites)
+- `GET /api/v1/favorites/:userId` – User favorites
+- `POST /api/v1/favorites` – Add favorite
+- `DELETE /api/v1/favorites` – Remove favorite
 
-- **`POST /api/v1/auth/register`**: Register a new user.
-- **`POST /api/v1/auth/login`**: Login a user.
-- **`GET /api/v1/vehicles`**: Returns a JSON array of vehicle objects. Supports filtering and sorting via query parameters.
-- **`GET /api/v1/vehicles/:id`**: Returns a single vehicle object matching the provided `id`.
-- **`GET /api/v1/stats`**: Returns a JSON object containing calculated statistics from the dataset, such as numeric ranges and unique categorical values.
-- **`GET /api/v1/vehicles/scatter-plot`**: Returns the data needed for the scatter plot on the dashboard.
-- **`GET /api/v1/vehicles/names`**: Returns a list of all vehicle names for the search autocomplete.
-- **`GET /api/v1/vehicles/by-ids`**: Returns a list of vehicles for a given list of ids, used for the favorites page.
-- **`GET /api/v1/favorites/:userId`**: Get all favorite vehicles for a user.
-- **`POST /api/v1/favorites`**: Add a vehicle to a user's favorites.
-- **`DELETE /api/v1/favorites`**: Remove a vehicle from a user's favorites.
+---

@@ -52,8 +52,10 @@ export default function VirtualizedVehicleGrid({ filteredVehicles, fetchNextPage
     if (!parentRef.current) return;
 
     const resizeObserver = new ResizeObserver(() => {
-      const width = parentRef.current.offsetWidth;
-      setColumnCount(Math.max(1, Math.floor(width / CARD_WIDTH_ESTIMATE)));
+      if (parentRef.current) {
+        const width = parentRef.current.offsetWidth;
+        setColumnCount(Math.max(1, Math.floor(width / CARD_WIDTH_ESTIMATE)));
+      }
     });
 
     resizeObserver.observe(parentRef.current);

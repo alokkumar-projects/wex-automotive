@@ -1,44 +1,95 @@
-import React, { useMemo } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useVehicles } from '../store/useVehicles.js';
 import { useVehicleParallax } from '../hooks/useVehicleParallax.js';
+import { vehicleApi } from '../api/vehicleApi.js';
+import LoadingSpinner from '../components/LoadingSpinner.jsx';
+import { useVehicles } from '../store/useVehicles.js';
+import { Button } from 'primereact/button';
+
+// Import PrimeReact components
+import { Card } from 'primereact/card';
+import { Tag } from 'primereact/tag';
+import { Fieldset } from 'primereact/fieldset';
 
 export default function VehicleDetail() {
   const { id } = useParams();
-  const allVehicles = useVehicles(state => state.allVehicles);
+  const [vehicle, setVehicle] = useState(null);
+  const { motionStyle, onMove, onLeave } = useVehicleParallax(vehicle?.acceleration);
+  const { favorites, toggleFavorite } = useVehicles();
+  const isFavorite = favorites.includes(Number(id));
 
-  const v = useMemo(() => allVehicles.find(x => x.id === Number(id)), [allVehicles, id]);
-  const { motionStyle, eventHandlers } = useVehicleParallax(v?.acceleration);
+  useEffect(() => {
+    const fetchVehicle = async () => {
+      // Use the correct API method to fetch a single vehicle by its ID
+      const data = await vehicleApi.getVehiclesByIds([id]);
+      setVehicle(data[0]);
+    };
+    fetchVehicle();
+  }, [id]);
+  
+  const getSeverityForOrigin = (origin) => {
+    const map = { USA: 'info', Europe: 'success', Japan: 'danger' };
+    return map[origin] || 'secondary';
+  };
 
-  if (!v) {
-    return <div>Loading vehicle details...</div>;
+  if (!vehicle) {
+    return <LoadingSpinner />;
   }
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div
-        className="rounded-xl border bg-gradient-to-br from-slate-800 to-slate-600 text-white p-6 h-64 overflow-hidden relative"
-        {...eventHandlers}
-      >
-        <motion.div style={motionStyle} className="absolute inset-0 flex items-center justify-center">
+  const header = (
+    <div onMouseMove={onMove} onMouseLeave={onLeave} className="h-64 overflow-hidden relative bg-slate-700">
+       <motion.div style={motionStyle} className="absolute inset-0 flex items-center justify-center">
           <div className="w-3/4 h-32 bg-white/10 rounded-2xl blur-md" />
         </motion.div>
-        <div className="relative z-10">
-          <h1 className="text-2xl font-bold">{v.carName}</h1>
-          <p className="text-sm opacity-80">Origin: {v.origin} • Year: 19{String(v.modelYear).padStart(2, '0')}</p>
-          <p className="mt-2 text-sm">Acceleration (0–60s proxy): {v.acceleration}</p>
-          <p className="text-xs opacity-70">Parallax responsiveness is driven by the car’s acceleration value.</p>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-        <div className="rounded border bg-white p-3">MPG: {v.mpg}</div>
-        <div className="rounded border bg-white p-3">Weight: {v.weight}</div>
-        <div className="rounded border bg-white p-3">Horsepower: {v.horsepower ?? 'NA'}</div>
-        <div className="rounded border bg-white p-3">Displacement: {v.displacement}</div>
-        <div className="rounded border bg-white p-3">Cylinders: {v.cylinders}</div>
-      </div>
     </div>
+  );
+
+  const title = (
+    <div className="flex items-center justify-between">
+      <div className="flex items-center gap-2">
+        <Tag severity={getSeverityForOrigin(vehicle.origin)} value={vehicle.origin}></Tag>
+        <span className="text-2xl font-bold">{vehicle.carName}</span>
+      </div>
+      <Button
+        icon={isFavorite ? 'pi pi-heart-fill' : 'pi pi-heart'}
+        rounded
+        text
+        severity="danger"
+        aria-label="Favorite"
+        onClick={() => toggleFavorite(vehicle.id)}
+      />
+    </div>
+  );
+
+  const subTitle = `Year: 19${String(vehicle.modelYear).padStart(2, '0')} • Acceleration: ${vehicle.acceleration}s`;
+
+  return (
+    <Card title={title} subTitle={subTitle} header={header}>
+      <Fieldset legend="Vehicle Specifications">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
+          <div className="text-center">
+            <div className="text-sm text-slate-500">MPG</div>
+            <div className="text-xl font-semibold">{vehicle.mpg}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-sm text-slate-500">Weight</div>
+            <div className="text-xl font-semibold">{vehicle.weight} lbs</div>
+          </div>
+          <div className="text-center">
+            <div className="text-sm text-slate-500">Horsepower</div>
+            <div className="text-xl font-semibold">{vehicle.horsepower ?? 'N/A'}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-sm text-slate-500">Displacement</div>
+            <div className="text-xl font-semibold">{vehicle.displacement}</div>
+          </div>
+          <div className="text-center">
+            <div className="text-sm text-slate-500">Cylinders</div>
+            <div className="text-xl font-semibold">{vehicle.cylinders}</div>
+          </div>
+        </div>
+      </Fieldset>
+    </Card>
   );
 }

@@ -101,4 +101,22 @@ export class VehicleService {
     // Select only the necessary columns for the chart
     return this._dbAll('SELECT weight, mpg, origin FROM vehicles');
   }
+
+  // Add this new method to your VehicleService class
+  async getVehicleNames() {
+    const query = 'SELECT carName FROM vehicles';
+    const rows = await this._dbAll(query);
+    // Return a simple array of strings
+    return rows.map(r => r.carName);
+  }
+
+  async getByIds(ids) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return [];
+    }
+    // Prevents SQL injection by creating placeholders
+    const placeholders = ids.map(() => '?').join(',');
+    const query = `SELECT * FROM vehicles WHERE id IN (${placeholders})`;
+    return this._dbAll(query, ids);
+  }
 }

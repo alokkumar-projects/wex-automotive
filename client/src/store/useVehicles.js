@@ -7,10 +7,13 @@ export const useVehicles = create(
     (set, get) => ({
       // State
       stats: null,
+      vehicleNames: [],
       filteredVehicles: [],
       isLoading: true,
       error: null,
       favorites: [],
+      favoriteDetails: [],
+      isLoadingFavorites: false,
       page: 1,
       hasMore: true,
       currentFilters: {},
@@ -19,15 +22,18 @@ export const useVehicles = create(
       initialize: async () => {
         try {
           set({ isLoading: true, error: null });
-          const statsRes = await vehicleApi.getStats();
-          set({ stats: statsRes });
+          const [statsRes, namesRes] = await Promise.all([
+            vehicleApi.getStats(),
+            vehicleApi.getVehicleNames(),
+          ]);
+          set({ stats: statsRes, vehicleNames: namesRes });
         } catch (e) {
           console.error('Initialization failed', e);
-          set({ isLoading: false, error: 'Failed to load vehicle data.' });
+          set({ isLoading: false, error: 'Failed to load initial data.' });
         }
       },
       
-      fetchFilteredVehicles: async (filters, reset = false) => {
+      fetchFilteredVehicles: async (filters) => {
         try {
           set({ isLoading: true, error: null, currentFilters: filters });
           const apiParams = { ...filters, page: 1, limit: 20 };
@@ -36,7 +42,6 @@ export const useVehicles = create(
               apiParams[key] = apiParams[key].join(',');
             }
           }
-
           const vehiclesRes = await vehicleApi.getVehicles(apiParams);
           set({
             filteredVehicles: vehiclesRes,
@@ -51,18 +56,12 @@ export const useVehicles = create(
       },
 
       fetchNextPage: async () => {
-        // This is the line that was fixed
         const { page, hasMore, isLoading, currentFilters } = get();
         if (isLoading || !hasMore) return;
 
         try {
           set({ isLoading: true });
           const apiParams = { ...currentFilters, page, limit: 20 };
-          for (const key in apiParams) {
-            if (Array.isArray(apiParams[key])) {
-              apiParams[key] = apiParams[key].join(',');
-            }
-          }
           const vehiclesRes = await vehicleApi.getVehicles(apiParams);
           set((state) => ({
             filteredVehicles: [...state.filteredVehicles, ...vehiclesRes],
@@ -76,12 +75,33 @@ export const useVehicles = create(
         }
       },
       
+      fetchFavoriteDetails: async () => {
+        const { favorites } = get();
+        if (favorites.length === 0) {
+          set({ favoriteDetails: [] });
+          return;
+        }
+        try {
+          set({ isLoadingFavorites: true });
+          const details = await vehicleApi.getVehiclesByIds(favorites);
+          set({ favoriteDetails: details, isLoadingFavorites: false });
+        } catch (e) {
+          console.error('Failed to fetch favorite details', e);
+          set({ isLoadingFavorites: false });
+        }
+      },
+
       toggleFavorite: (id) => {
-        set((s) => {
-          const exists = s.favorites.includes(id);
-          const favorites = exists ? s.favorites.filter(x => x !== id) : [...s.favorites, id];
-          return { favorites };
+        set((state) => {
+          const exists = state.favorites.includes(id);
+          const newFavorites = exists
+            ? state.favorites.filter((favId) => favId !== id)
+            : [...state.favorites, id];
+          return { favorites: newFavorites };
         });
+        // This is the crucial fix: After updating the favorites list,
+        // immediately re-fetch the details for the favorites page.
+        get().fetchFavoriteDetails();
       },
     }),
     {

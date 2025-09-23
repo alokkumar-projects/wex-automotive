@@ -75,6 +75,27 @@ fastify.get('/api/v1/vehicles/scatter-plot', async (request, reply) => {
   }
 });
 
+fastify.get('/api/v1/vehicles/names', async (request, reply) => {
+  try {
+    const names = await vehicleService.getVehicleNames();
+    return names;
+  } catch (err) {
+    request.log.error(err, 'Failed to get vehicle names');
+    reply.code(500).send({ error: 'Failed to retrieve vehicle names' });
+  }
+});
+
+fastify.get('/api/v1/vehicles/by-ids', async (request, reply) => {
+  try {
+    const ids = (request.query.ids || '').split(',').map(Number).filter(Boolean);
+    const vehicles = await vehicleService.getByIds(ids);
+    return vehicles;
+  } catch (err) {
+    request.log.error(err, 'Failed to get vehicles by IDs');
+    reply.code(500).send({ error: 'Failed to retrieve vehicles' });
+  }
+});
+
 // --- Server Start & Graceful Shutdown ---
 const start = async () => {
   try {

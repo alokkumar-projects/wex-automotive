@@ -1,3 +1,5 @@
+Of course, here is the updated `README.MD` file with the high-level and other diagrams and docs as implementation has changed and enhancements like themes etc has been implemented after initial HDL, component diag or web sequence diagrams.
+
 # WEX Automotive Data Explorer
 
 This is a full-stack web application that allows users to explore a rich dataset of automotive information from 1970-1982. The application is architected with a modern stack, featuring a React frontend and a Fastify backend server, both containerized with Docker for easy setup and deployment.
@@ -10,20 +12,14 @@ This diagram provides a comprehensive overview of the application's components, 
 
 **Data Flow & Lifecycle:**
 
-1.  **Build/Seed Time:** The process begins with the raw `auto-mpg.csv` data file. A Node.js script (`db/seed.js`) is executed manually (`npm run db:seed`) to parse this file, clean the data, and populate a persistent **SQLite database file (`db.sqlite`)**.
-2.  **Runtime:** When a user accesses the application at `http://localhost:5173`, their browser receives a production-built React single-page application, served statically by an **Nginx** web server running in the `client` container.
-3.  **Interaction:** The React application, running in the user's browser, makes API calls to the backend. These requests are sent to `http://localhost:5175`, which is mapped to the `server` container.
-4.  **API & Database:** The **Fastify** server receives these API requests, queries the pre-populated SQLite database for the relevant vehicle data, and returns it to the client as a JSON payload. The SQLite database file is mounted into the server container via a Docker volume, ensuring data persistence.
-
-<!-- end list -->
+1.  **Build/Seed Time**: The process begins with the raw `auto-mpg.csv` data file. A Node.js script (`db/seed.js`) is executed manually (`npm run db:seed`) to parse this file, clean the data, and populate a persistent **SQLite database file (`db.sqlite`)**.
+2.  **Runtime**: When a user accesses the application at `http://localhost:5173`, their browser receives a production-built React single-page application, served statically by an **Nginx** web server running in the `client` container.
+3.  **Interaction**: The React application, running in the user's browser, makes API calls to the backend. These requests are sent to `http://localhost:5175`, which is mapped to the `server` container.
+4.  **API & Database**: The **Fastify** server receives these API requests, queries the pre-populated SQLite database for the relevant vehicle data, and returns it to the client as a JSON payload. The SQLite database file is mounted into the server container via a Docker volume, ensuring data persistence.
 
 ### High-Level Architecture
 
-![High-Level Architecture](./docs/high-level-architecture.png)
-
 ### Detailed Component Architecture
-
-![Detailed Component Architecture](./docs/detailed-component-architecture.png)
 
 ```mermaid
 graph TD
@@ -78,6 +74,8 @@ graph TD;
         E --> G;
         H[vehicleApi.js] --> I("API Requests <br/> Axios");
         F --> H;
+        J[ThemeContext.jsx] --> K(Theme Management);
+        A --> K;
     end
 ```
 
@@ -168,28 +166,29 @@ To get the application up and running on your local machine, follow these simple
 
 ### Frontend (Client)
 
-- **Interactive Dashboard:** A scatter plot visualization showing the relationship between vehicle weight and MPG, color-coded by origin.
-- **Dynamic Gallery & Filtering:** A gallery of all vehicles with a powerful filtering panel. Users can filter by name, origin, cylinders, and various numeric ranges (MPG, Weight, etc.).
-- **Data Sorting:** The gallery can be sorted by multiple attributes like MPG, weight, and model year.
-- **Vehicle Detail Page:** A dedicated page for each vehicle with a data-driven parallax effect where the animation is influenced by the car's acceleration value.
-- **Favorites:** Users can mark vehicles as favorites, and this state is persisted in local storage.
-- **Responsive Design:** The application is fully responsive, built with **Tailwind CSS**.
+- **Interactive Dashboard**: A scatter plot visualization showing the relationship between vehicle weight and MPG, color-coded by origin.
+- **Dynamic Gallery & Filtering**: A gallery of all vehicles with a powerful filtering panel. Users can filter by name, origin, cylinders, and various numeric ranges (MPG, Weight, etc.).
+- **Data Sorting**: The gallery can be sorted by multiple attributes like MPG, weight, and model year.
+- **Vehicle Detail Page**: A dedicated page for each vehicle with a data-driven parallax effect where the animation is influenced by the car's acceleration value.
+- **Favorites**: Users can mark vehicles as favorites, and this state is persisted in local storage.
+- **Responsive Design**: The application is fully responsive, built with **Tailwind CSS**.
+- **Light/Dark Theme**: The application supports both light and dark themes, with the theme being persisted in local storage.
 
 ### Backend (Server)
 
-- **Efficient RESTful API:** Built with Fastify to serve cleaned and structured vehicle data and pre-calculated statistics.
-- **Data Processing:** The server reads from a tab-separated `auto-mpg.csv`, handles missing values, and normalizes headers before populating the database.
+- **Efficient RESTful API**: Built with Fastify to serve cleaned and structured vehicle data and pre-calculated statistics.
+- **Data Processing**: The server reads from a tab-separated `auto-mpg.csv`, handles missing values, and normalizes headers before populating the database.
 
 ---
 
 ## Technology Stack
 
-| Area         | Technology                                                                                              |
-| :----------- | :------------------------------------------------------------------------------------------------------ |
-| **Frontend** | React, Vite, Zustand (for state management), React Router, Tailwind CSS, Chart.js, Framer Motion, Axios |
-| **Backend**  | Node.js, Fastify, SQLite3                                                                               |
-| **DevOps**   | Docker, Docker Compose                                                                                  |
-| **Testing**  | Vitest, React Testing Library                                                                           |
+| Area         | Technology                                                                                                          |
+| :----------- | :------------------------------------------------------------------------------------------------------------------ |
+| **Frontend** | React, Vite, Zustand (for state management), React Router, Tailwind CSS, Chart.js, Framer Motion, Axios, PrimeReact |
+| **Backend**  | Node.js, Fastify, SQLite3                                                                                           |
+| **DevOps**   | Docker, Docker Compose                                                                                              |
+| **Testing**  | Vitest, React Testing Library                                                                                       |
 
 ---
 
@@ -200,3 +199,6 @@ The server exposes the following endpoints:
 - **`GET /api/v1/vehicles`**: Returns a JSON array of vehicle objects. Supports filtering and sorting via query parameters.
 - **`GET /api/v1/vehicles/:id`**: Returns a single vehicle object matching the provided `id`.
 - **`GET /api/v1/stats`**: Returns a JSON object containing calculated statistics from the dataset, such as numeric ranges and unique categorical values.
+- **`GET /api/v1/vehicles/scatter-plot`**: Returns the data needed for the scatter plot on the dashboard.
+- **`GET /api/v1/vehicles/names`**: Returns a list of all vehicle names for the search autocomplete.
+- **`GET /api/v1/vehicles/by-ids`**: Returns a list of vehicles for a given list of ids, used for the favorites page.

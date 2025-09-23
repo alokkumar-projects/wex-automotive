@@ -25,15 +25,22 @@ export default function Gallery() {
     order: withDefault(StringParam, undefined),
   });
 
+  // Use useCallback to ensure the debounced function reference is stable
   const debouncedFetch = useCallback(
     debounce((filters) => fetchFilteredVehicles(filters), 300),
     [fetchFilteredVehicles]
   );
 
+  // THE FIX: Stabilize the useEffect dependency by stringifying the query object.
+  const queryString = JSON.stringify(query);
+
   useEffect(() => {
-    debouncedFetch(query);
+    // We parse the string back into an object to pass to the fetch function
+    const queryParams = JSON.parse(queryString);
+    debouncedFetch(queryParams);
+
     return () => debouncedFetch.cancel();
-  }, [query, debouncedFetch]);
+  }, [queryString, debouncedFetch]); // Now this only runs when the URL content actually changes.
 
   const renderContent = () => {
     if (isLoading && filteredVehicles.length === 0) {
@@ -46,7 +53,7 @@ export default function Gallery() {
     if (error) {
       return <EmptyState message={error} />;
     }
-    if (filteredVehicles.length === 0) {
+    if (!isLoading && filteredVehicles.length === 0) {
       return <EmptyState message="No vehicles match the current filters." />;
     }
     return (

@@ -1,26 +1,43 @@
 import React from 'react';
 import { useVehicles } from '../store/useVehicles.js';
 import LoadingSpinner from './LoadingSpinner.jsx';
-import { StringParam, ArrayParam, NumberParam, withDefault } from 'use-query-params';
-
 
 function Range({ label, value, onChange, min, max, step = 1 }) {
-  // Guard against the initial render when stats might not be ready.
+  const id = React.useId();
+  // Provide a fallback array to prevent crashes if value is temporarily undefined
   const [lo, hi] = value || [min, max];
-  
+
   return (
     <div>
-      <div className="flex justify-between text-sm">
+      <label id={`${id}-label`} className="flex justify-between text-sm">
         <span>{label}</span>
         <span>{lo} – {hi}</span>
-      </div>
+      </label>
       <div className="flex items-center gap-2">
-        <input type="range" min={min} max={max} step={step} value={lo}
+        <label htmlFor={`${id}-lo`} className="sr-only">{label} minimum</label>
+        <input
+          id={`${id}-lo`}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={lo}
           onChange={(e) => onChange([Number(e.target.value), hi])}
-          className="w-full" />
-        <input type="range" min={min} max={max} step={step} value={hi}
+          className="w-full"
+          aria-labelledby={`${id}-label`}
+        />
+        <label htmlFor={`${id}-hi`} className="sr-only">{label} maximum</label>
+        <input
+          id={`${id}-hi`}
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={hi}
           onChange={(e) => onChange([lo, Number(e.target.value)])}
-          className="w-full" />
+          className="w-full"
+          aria-labelledby={`${id}-label`}
+        />
       </div>
     </div>
   );
@@ -31,7 +48,7 @@ export default function FilterPanel({ query, setQuery }) {
 
   if (!stats) {
     return (
-      <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">
+      <div className="w-full lg:w-80 shrink-0 p-4">
         <LoadingSpinner />
       </div>
     );
@@ -51,15 +68,15 @@ export default function FilterPanel({ query, setQuery }) {
 
   const handleRangeChange = (key, value) => {
     setQuery({ [key]: value }, 'replaceIn');
-  }
+  };
 
   const handleSortChange = (e) => {
     const [key, direction] = e.target.value.split(':');
-    setQuery({ 
-      sortBy: key || undefined, 
-      order: direction || undefined 
+    setQuery({
+      sortBy: key || undefined,
+      order: direction || 'asc',
     }, 'replaceIn');
-  }
+  };
 
   return (
     <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">

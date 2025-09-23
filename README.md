@@ -1,6 +1,8 @@
-You are absolutely right to call that out. My apologies\! I misunderstood and removed the detailed component and sequence diagrams when I should have kept them. They provide valuable, in-depth information that the new high-level diagrams don't cover.
+You are right, my apologies again. It looks like GitHub's Mermaid renderer is strict and didn't accept the HTML `<i>` tags I used for the icons. The correct syntax is to use `fa:fa-icon-name`.
 
-I've corrected this by adding them back into a dedicated "Low-Level Design" section. Here is the complete and corrected `README.md` with all the diagrams restored.
+I have fixed the syntax in the two architecture diagrams. The component and sequence diagrams were already correct.
+
+Here is the complete and fully corrected `README.md` that should render properly on GitHub.
 
 ---
 
@@ -26,23 +28,23 @@ The live application is deployed across specialized cloud platforms for optimal 
 ```mermaid
 graph TD
     subgraph "User"
-        A[<i class='fa fa-user'></i> User's Browser]
+        A[fa:fa-user User's Browser]
     end
 
     subgraph "Production Environment"
         subgraph "Vercel Platform"
-            B[<i class='fa fa-react'></i> React SPA Frontend<br/>(wex-automotive.vercel.app)]
+            B[fa:fa-react React SPA Frontend<br/>(wex-automotive.vercel.app)]
         end
 
         subgraph "Render Platform"
-            C[<i class='fa fa-node-js'></i> Fastify API Server<br/>(wex-automotive-server.onrender.com)]
-            D[<i class='fa fa-database'></i> Production Database<br/>(e.g., Render PostgreSQL)]
+            C[fa:fa-node-js Fastify API Server<br/>(wex-automotive-server.onrender.com)]
+            D[fa:fa-database Production Database<br/>(e.g., Render PostgreSQL)]
             C <--> D
         end
     end
 
     subgraph "One-Time Data Seeding"
-        E[<i class='fa fa-file-csv'></i> auto-mpg.csv] --> F((db/seed.js))
+        E[fa:fa-file-csv auto-mpg.csv] --> F((db/seed.js))
         F -- "Populates" --> D
     end
 
@@ -62,22 +64,22 @@ For local development, the entire application is orchestrated using **Docker Com
 ```mermaid
 graph TD
     subgraph "Developer's Machine"
-        A[<i class='fa fa-user'></i> Browser @ localhost:5173]
+        A[fa:fa-user Browser @ localhost:5173]
 
         subgraph "Docker Environment (Orchestrated by Docker Compose)"
             subgraph "Client Service (Port 5173)"
-                B[<i class='fa fa-server'></i> Nginx Server]
+                B[fa:fa-server Nginx Server]
             end
 
             subgraph "Server Service (Port 5175)"
-                C[<i class='fa fa-node-js'></i> Fastify Server]
-                D[<i class='fa fa-database'></i> SQLite Database]
+                C[fa:fa-node-js Fastify Server]
+                D[fa:fa-database SQLite Database]
                 C <--> D
             end
         end
 
         subgraph "Local Filesystem"
-             E[<i class='fa fa-file'></i> db.sqlite file]
+             E[fa:fa-file db.sqlite file]
         end
     end
 

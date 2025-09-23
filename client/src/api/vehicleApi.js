@@ -16,5 +16,9 @@ export const vehicleApi = {
   async getVehicles(params) {
     const response = await apiClient.get('/api/v1/vehicles', { params });
     return response.data;
+  },
+  async getScatterPlotData() {
+    const response = await apiClient.get('/api/v1/vehicles/scatter-plot');
+    return response.data;
   }
 };

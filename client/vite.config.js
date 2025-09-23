@@ -11,4 +11,7 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: './src/test/setup.js',
   },
+  optimizeDeps: {
+    include: ['react-window', 'react-virtualized-auto-sizer'],
+  },
 });

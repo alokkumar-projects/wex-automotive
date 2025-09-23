@@ -1,80 +1,92 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import dotenv from 'dotenv';
+import sqlite3 from 'sqlite3';
 import { getStats } from './utils/data.js';
-import { vehicleService } from './services/vehicleService.js';
-
-// Load environment variables
-dotenv.config();
+import { VehicleService } from './services/vehicleService.js';
 
 const fastify = Fastify({ logger: true });
 await fastify.register(cors, { origin: true });
 
-// --- Centralized Error Handler ---
-fastify.setErrorHandler((error, request, reply) => {
-  fastify.log.error(error);
-  // Send a generic error response
-  reply.status(500).send({ error: 'Internal Server Error' });
+// --- Database Connection & Service Instantiation ---
+const db = new sqlite3.Database('./db.sqlite', sqlite3.OPEN_READONLY, (err) => {
+  if (err) {
+    fastify.log.error(err, 'Database connection failed');
+    process.exit(1);
+  }
 });
 
-// --- API Schema for Validation ---
-const vehicleQuerySchema = {
-  querystring: {
-    type: 'object',
-    properties: {
-      searchTerm: { type: 'string' },
-      origins: { type: 'string' },
-      cylinders: { type: 'string' },
-      sortBy: { type: 'string', enum: ['mpg', 'weight', 'horsepower', 'modelYear'] },
-      order: { type: 'string', enum: ['asc', 'desc'] },
-      mpg: { type: 'string', pattern: '^\\d+(\\.\\d+)?,\\d+(\\.\\d+)?$' },
-      weight: { type: 'string', pattern: '^\\d+,\\d+$' },
-      horsepower: { type: 'string', pattern: '^\\d+,\\d+$' },
-      displacement: { type: 'string', pattern: '^\\d+,\\d+$' },
-      acceleration: { type: 'string', pattern: '^\\d+(\\.\\d+)?,\\d+(\\.\\d+)?$' },
-      modelYear: { type: 'string', pattern: '^\\d+,\\d+$' },
-    },
-  }
-};
+// Create an instance of the service, injecting the database connection.
+const vehicleService = new VehicleService(db);
+
+// --- In-Memory Cache for Static Stats Data ---
+let statsCache = null;
 
 // --- API Route Definitions (v1) ---
 
-let statsCache = null;
-
-fastify.get('/', async () => ({ status: 'ok', service: 'wex-automotive-api' }));
-
-fastify.get('/api/v1/stats', async (req, reply) => {
-  // Return from cache if it exists
+fastify.get('/api/v1/stats', async (request, reply) => {
   if (statsCache) {
-    fastify.log.info('Returning stats from cache');
+    request.log.info('Returning stats from cache');
     return statsCache;
   }
-  const allVehicles = await vehicleService.getAllForStats();
-  statsCache = getStats(allVehicles);
-  fastify.log.info('Caching new stats result');
-  return statsCache;
-});
-
-fastify.get('/api/v1/vehicles', { schema: vehicleQuerySchema }, async (req, reply) => {
-  const vehicles = await vehicleService.getAll(req.query);
-  return vehicles;
-});
-
-fastify.get('/api/v1/vehicles/:id', async (req, reply) => {
-  const id = Number(req.params.id);
-  const vehicle = await vehicleService.getById(id);
-  if (!vehicle) {
-    return reply.code(404).send({ error: 'Vehicle not found' });
+  try {
+    const allVehicles = await vehicleService.getAllForStats();
+    statsCache = getStats(allVehicles);
+    request.log.info('Stats cached successfully');
+    return statsCache;
+  } catch (err) {
+    request.log.error(err, 'Failed to get stats');
+    reply.code(500).send({ error: 'Failed to retrieve statistics' });
   }
-  return vehicle;
 });
 
-
-// --- Server Start ---
-const port = process.env.PORT || 5175;
-const host = process.env.HOST || '0.0.0.0';
-
-fastify.listen({ port, host }).catch((err) => {
-  fastify.log.error(err);
-  process.exit(1);
+fastify.get('/api/v1/vehicles', async (request, reply) => {
+  try {
+    const vehicles = await vehicleService.getAll(request.query);
+    return vehicles;
+  } catch (err) {
+    request.log.error(err, 'Failed to query vehicles');
+    reply.code(500).send({ error: 'Failed to retrieve vehicles' });
+  }
 });
+
+fastify.get('/api/v1/vehicles/:id', async (request, reply) => {
+  try {
+    const id = Number(request.params.id);
+    const vehicle = await vehicleService.getById(id);
+    if (!vehicle) {
+      return reply.code(404).send({ error: 'Vehicle not found' });
+    }
+    return vehicle;
+  } catch (err) {
+    request.log.error(err, 'Failed to get vehicle by ID');
+    reply.code(500).send({ error: 'Failed to retrieve vehicle' });
+  }
+});
+
+// --- Server Start & Graceful Shutdown ---
+const start = async () => {
+  try {
+    await fastify.listen({ port: process.env.PORT || 5175, host: '0.0.0.0' });
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
+
+const close = (signal) => {
+  fastify.log.info(`Received ${signal}, shutting down...`);
+  db.close((err) => {
+    if (err) {
+      fastify.log.error(err, 'Error closing database');
+    } else {
+      fastify.log.info('Database connection closed.');
+    }
+    fastify.close(() => {
+        process.exit(0);
+    });
+  });
+};
+process.on('SIGINT', close);
+process.on('SIGTERM', close);
+
+start();

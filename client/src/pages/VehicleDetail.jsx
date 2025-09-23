@@ -1,52 +1,27 @@
 import React, { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
-import { motion, useSpring, useMotionValue } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useVehicles } from '../store/useVehicles.js';
-
-function physicsForAcceleration(acc) {
-  const a = Math.max(8, Math.min(25, acc ?? 16));
-  const t = (25 - a) / (25 - 8);
-  const stiffness = 80 + t * 220;
-  const damping = 30 - t * 15;
-  return { stiffness, damping };
-}
+import { useVehicleParallax } from '../hooks/useVehicleParallax.js';
 
 export default function VehicleDetail() {
   const { id } = useParams();
-  const { allVehicles } = useVehicles();
+  const allVehicles = useVehicles(state => state.allVehicles);
 
-  // Note: This will only find a vehicle if it's in the currently filtered list.
-  const v = useMemo(() => allVehicles.find(x => x.id === Number(id)), [vehicles, id]);
+  const v = useMemo(() => allVehicles.find(x => x.id === Number(id)), [allVehicles, id]);
+  const { motionStyle, eventHandlers } = useVehicleParallax(v?.acceleration);
 
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const { stiffness, damping } = physicsForAcceleration(v?.acceleration);
-  const tx = useSpring(mx, { stiffness, damping });
-  const ty = useSpring(my, { stiffness, damping });
-
-  const onMove = (e) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const dx = (e.clientX - cx) / rect.width;
-    const dy = (e.clientY - cy) / rect.height;
-    mx.set(dx * 30);
-    my.set(dy * 30);
-  };
-
-  if (!v) return <div>Loading... (Or vehicle not in current filter)</div>;
+  if (!v) {
+    return <div>Loading vehicle details...</div>;
+  }
 
   return (
     <div className="flex flex-col gap-6">
       <div
         className="rounded-xl border bg-gradient-to-br from-slate-800 to-slate-600 text-white p-6 h-64 overflow-hidden relative"
-        onMouseMove={onMove}
-        onMouseLeave={() => { mx.set(0); my.set(0); }}
+        {...eventHandlers}
       >
-        <motion.div
-          style={{ x: tx, y: ty }}
-          className="absolute inset-0 flex items-center justify-center"
-        >
+        <motion.div style={motionStyle} className="absolute inset-0 flex items-center justify-center">
           <div className="w-3/4 h-32 bg-white/10 rounded-2xl blur-md" />
         </motion.div>
         <div className="relative z-10">

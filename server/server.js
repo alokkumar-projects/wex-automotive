@@ -63,6 +63,17 @@ fastify.get('/api/v1/vehicles/:id', async (request, reply) => {
   }
 });
 
+fastify.get('/api/v1/vehicles/:id/related', async (request, reply) => {
+  try {
+    const id = Number(request.params.id);
+    const vehicles = await vehicleService.getRelatedVehicles(id);
+    return vehicles;
+  } catch (err) {
+    request.log.error(err, 'Failed to get related vehicles');
+    reply.code(500).send({ error: 'Failed to retrieve related vehicles' });
+  }
+});
+
 // Add this new route definition
 
 fastify.get('/api/v1/vehicles/scatter-plot', async (request, reply) => {

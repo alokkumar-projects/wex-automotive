@@ -6,6 +6,7 @@ import { vehicleApi } from '../api/vehicleApi.js';
 import LoadingSpinner from '../components/LoadingSpinner.jsx';
 import { useVehicles } from '../store/useVehicles.js';
 import { Button } from 'primereact/button';
+import VehicleCard from '../components/VehicleCard.jsx';
 
 // Import PrimeReact components
 import { Card } from 'primereact/card';
@@ -15,17 +16,22 @@ import { Fieldset } from 'primereact/fieldset';
 export default function VehicleDetail() {
   const { id } = useParams();
   const [vehicle, setVehicle] = useState(null);
+  const [relatedVehicles, setRelatedVehicles] = useState([]);
   const { motionStyle, onMove, onLeave } = useVehicleParallax(vehicle?.acceleration);
   const { favorites, toggleFavorite } = useVehicles();
   const isFavorite = favorites.includes(Number(id));
 
   useEffect(() => {
-    const fetchVehicle = async () => {
-      // Use the correct API method to fetch a single vehicle by its ID
-      const data = await vehicleApi.getVehiclesByIds([id]);
-      setVehicle(data[0]);
+    const fetchVehicleData = async () => {
+      setVehicle(null); // Reset on ID change
+      const [vehicleData, relatedData] = await Promise.all([
+        vehicleApi.getVehiclesByIds([id]),
+        vehicleApi.getRelatedVehicles(id)
+      ]);
+      setVehicle(vehicleData[0]);
+      setRelatedVehicles(relatedData);
     };
-    fetchVehicle();
+    fetchVehicleData();
   }, [id]);
   
   const getSeverityForOrigin = (origin) => {
@@ -65,31 +71,44 @@ export default function VehicleDetail() {
   const subTitle = `Year: 19${String(vehicle.modelYear).padStart(2, '0')} • Acceleration: ${vehicle.acceleration}s`;
 
   return (
-    <Card title={title} subTitle={subTitle} header={header}>
-      <Fieldset legend="Vehicle Specifications">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
-          <div className="text-center">
-            <div className="text-sm text-slate-500">MPG</div>
-            <div className="text-xl font-semibold">{vehicle.mpg}</div>
+    <>
+      <Card title={title} subTitle={subTitle} header={header}>
+        <Fieldset legend="Vehicle Specifications">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4">
+            <div className="text-center">
+              <div className="text-sm text-slate-500">MPG</div>
+              <div className="text-xl font-semibold">{vehicle.mpg}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-slate-500">Weight</div>
+              <div className="text-xl font-semibold">{vehicle.weight} lbs</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-slate-500">Horsepower</div>
+              <div className="text-xl font-semibold">{vehicle.horsepower ?? 'N/A'}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-slate-500">Displacement</div>
+              <div className="text-xl font-semibold">{vehicle.displacement}</div>
+            </div>
+            <div className="text-center">
+              <div className="text-sm text-slate-500">Cylinders</div>
+              <div className="text-xl font-semibold">{vehicle.cylinders}</div>
+            </div>
           </div>
-          <div className="text-center">
-            <div className="text-sm text-slate-500">Weight</div>
-            <div className="text-xl font-semibold">{vehicle.weight} lbs</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-slate-500">Horsepower</div>
-            <div className="text-xl font-semibold">{vehicle.horsepower ?? 'N/A'}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-slate-500">Displacement</div>
-            <div className="text-xl font-semibold">{vehicle.displacement}</div>
-          </div>
-          <div className="text-center">
-            <div className="text-sm text-slate-500">Cylinders</div>
-            <div className="text-xl font-semibold">{vehicle.cylinders}</div>
+        </Fieldset>
+      </Card>
+
+      {relatedVehicles.length > 0 && (
+        <div className="mt-8">
+          <h2 className="text-xl font-semibold mb-4">Related Vehicles</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {relatedVehicles.map(v => (
+              <VehicleCard key={v.id} v={v} />
+            ))}
           </div>
         </div>
-      </Fieldset>
-    </Card>
+      )}
+    </>
   );
 }

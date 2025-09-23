@@ -119,4 +119,21 @@ export class VehicleService {
     const query = `SELECT * FROM vehicles WHERE id IN (${placeholders})`;
     return this._dbAll(query, ids);
   }
+
+  async getRelatedVehicles(id) {
+    const vehicle = await this.getById(id);
+    if (!vehicle) {
+      return [];
+    }
+    const { origin, modelYear } = vehicle;
+
+    const query = `
+      SELECT * FROM vehicles
+      WHERE (origin = ? OR modelYear = ?) AND id != ?
+      ORDER BY RANDOM()
+      LIMIT 4
+    `;
+    const params = [origin, modelYear, id];
+    return this._dbAll(query, params);
+  }
 }

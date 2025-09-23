@@ -31,5 +31,9 @@ export const vehicleApi = {
       params: { ids: ids.join(',') }
     });
     return response.data;
+  },
+  async getRelatedVehicles(id) {
+    const response = await apiClient.get(`/api/v1/vehicles/${id}/related`);
+    return response.data;
   }
 };

@@ -1,121 +1,65 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import sqlite3 from 'sqlite3';
 import { getStats } from './utils/data.js';
+import { vehicleService } from './services/vehicleService.js';
 
 const fastify = Fastify({ logger: true });
 await fastify.register(cors, { origin: true });
 
-const db = new sqlite3.Database('./db.sqlite', sqlite3.OPEN_READONLY, (err) => {
-  if (err) {
-    fastify.log.error('DB Connection Error:', err.message);
-    process.exit(1);
-  }
-  console.log('Connected to the SQLite database.');
-});
 
-const dbAll = (query, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.all(query, params, (err, rows) => {
-      if (err) return reject(err);
-      resolve(rows);
-    });
-  });
-};
-
-const dbGet = (query, params = []) => {
-  return new Promise((resolve, reject) => {
-    db.get(query, params, (err, row) => {
-      if (err) return reject(err);
-      resolve(row);
-    });
-  });
-};
+// --- API Route Definitions ---
 
 fastify.get('/', async () => ({ status: 'ok', service: 'wex-automotive-api' }));
 
+/**
+ * Route to get calculated statistics for the entire dataset.
+ */
 fastify.get('/api/stats', async (req, reply) => {
   try {
-    const rows = await dbAll('SELECT * FROM vehicles');
-    return getStats(rows);
+    const allVehicles = await vehicleService.getAllForStats();
+    // The getStats utility is still useful for calculating ranges, averages, etc.
+    return getStats(allVehicles);
   } catch (err) {
-    fastify.log.error(err);
-    reply.code(500).send({ error: 'Failed to fetch vehicle data for stats' });
+    fastify.log.error(err, 'Failed to fetch stats');
+    reply.code(500).send({ error: 'Internal Server Error' });
   }
 });
 
+/**
+ * Route to get a list of vehicles based on query parameters for filtering and sorting.
+ */
 fastify.get('/api/vehicles', async (req, reply) => {
-  const {
-    searchTerm, origins, cylinders, sortBy, order = 'asc',
-    mpg, weight, horsepower, displacement, acceleration, modelYear
-  } = req.query;
-
-  let query = 'SELECT * FROM vehicles WHERE 1=1';
-  const params = [];
-
-  // Helper for range filters
-  const addRangeFilter = (field, value) => {
-    if (value) {
-      const [min, max] = value.split(',').map(Number);
-      if (!isNaN(min) && !isNaN(max)) {
-        query += ` AND ${field} BETWEEN ? AND ?`;
-        params.push(min, max);
-      }
-    }
-  };
-
-  if (searchTerm) {
-    query += ' AND carName LIKE ?';
-    params.push(`%${searchTerm}%`);
-  }
-  if (origins) {
-    const originList = origins.split(',');
-    query += ` AND origin IN (${originList.map(() => '?').join(',')})`;
-    params.push(...originList);
-  }
-  if (cylinders) {
-    const cylinderList = cylinders.split(',');
-    query += ` AND cylinders IN (${cylinderList.map(() => '?').join(',')})`;
-    params.push(...cylinderList);
-  }
-
-  // Add range filters
-  addRangeFilter('mpg', mpg);
-  addRangeFilter('weight', weight);
-  addRangeFilter('horsepower', horsepower);
-  addRangeFilter('displacement', displacement);
-  addRangeFilter('acceleration', acceleration);
-  addRangeFilter('modelYear', modelYear);
-
-  if (sortBy && ['mpg', 'weight', 'horsepower', 'modelYear'].includes(sortBy)) {
-    query += ` ORDER BY ${sortBy} ${order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}`;
-  }
-
   try {
-    const rows = await dbAll(query, params);
-    return rows;
+    // Pass the entire query object directly to the service
+    const vehicles = await vehicleService.getAll(req.query);
+    return vehicles;
   } catch (err) {
-    fastify.log.error(err);
-    reply.code(500).send({ error: 'Failed to query vehicles' });
+    fastify.log.error(err, 'Failed to query vehicles');
+    reply.code(500).send({ error: 'Internal Server Error' });
   }
 });
 
-
+/**
+ * Route to get a single vehicle by its ID.
+ */
 fastify.get('/api/vehicles/:id', async (req, reply) => {
   try {
     const id = Number(req.params.id);
-    const row = await dbGet('SELECT * FROM vehicles WHERE id = ?', [id]);
-    if (!row) {
+    const vehicle = await vehicleService.getById(id);
+
+    if (!vehicle) {
       reply.code(404).send({ error: 'Vehicle not found' });
       return;
     }
-    return row;
+    return vehicle;
   } catch (err) {
-    fastify.log.error(err);
-    reply.code(500).send({ error: 'Failed to fetch vehicle' });
+    fastify.log.error(err, 'Failed to fetch vehicle by ID');
+    reply.code(500).send({ error: 'Internal Server Error' });
   }
 });
 
+
+// --- Server Start ---
 const port = process.env.PORT || 5175;
 const host = process.env.HOST || '0.0.0.0';
 

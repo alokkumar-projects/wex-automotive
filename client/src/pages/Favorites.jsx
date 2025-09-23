@@ -1,12 +1,11 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useVehicles } from '../store/useVehicles.js';
 import VehicleCard from '../components/VehicleCard.jsx';
 
 export default function Favorites() {
-  const { favorites, vehicles, fetchAll } = useVehicles();
+  const { favorites, vehicles } = useVehicles();
 
-  useEffect(() => { if (!vehicles.length) fetchAll(); }, [vehicles.length, fetchAll]);
-
+  // Note: This will only show favorites that are present in the currently filtered list of vehicles.
   const favs = vehicles.filter(v => favorites.includes(v.id));
 
   return (

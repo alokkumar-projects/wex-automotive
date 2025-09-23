@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { motion, useSpring, useMotionValue } from 'framer-motion';
 import { useVehicles } from '../store/useVehicles.js';
@@ -13,10 +13,9 @@ function physicsForAcceleration(acc) {
 
 export default function VehicleDetail() {
   const { id } = useParams();
-  const { vehicles, fetchAll } = useVehicles();
+  const { vehicles } = useVehicles();
 
-  useEffect(() => { if (!vehicles.length) fetchAll(); }, [vehicles.length, fetchAll]);
-
+  // Note: This will only find a vehicle if it's in the currently filtered list.
   const v = useMemo(() => vehicles.find(x => x.id === Number(id)), [vehicles, id]);
 
   const mx = useMotionValue(0);
@@ -35,7 +34,7 @@ export default function VehicleDetail() {
     my.set(dy * 30);
   };
 
-  if (!v) return <div>Loading...</div>;
+  if (!v) return <div>Loading... (Or vehicle not in current filter)</div>;
 
   return (
     <div className="flex flex-col gap-6">

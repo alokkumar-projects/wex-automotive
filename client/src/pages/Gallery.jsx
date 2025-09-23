@@ -13,7 +13,6 @@ export default function Gallery() {
 
   const [query, setQuery] = useQueryParams({
     searchTerm: withDefault(StringParam, ''),
-    // FIX: Use DelimitedArrayParam to send comma-separated strings to the API
     origins: withDefault(DelimitedArrayParam, []),
     cylinders: withDefault(DelimitedArrayParam, []),
     mpg: DelimitedArrayParam,
@@ -28,16 +27,14 @@ export default function Gallery() {
 
   const debouncedFetch = useCallback(
     debounce((filters) => fetchFilteredVehicles(filters), 300),
-    [fetchFilteredVehicles]
+    [fetchFilteredVehicles] 
   );
-
-  // Stabilize the useEffect dependency by stringifying the query object.
+  
   const queryString = JSON.stringify(query);
 
   useEffect(() => {
     const queryParams = JSON.parse(queryString);
     debouncedFetch(queryParams);
-
     return () => debouncedFetch.cancel();
   }, [queryString, debouncedFetch]);
 

@@ -1,15 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import debounce from 'lodash.debounce';
 import { vehicleApi } from '../api/vehicleApi';
-
-const debouncedFetch = debounce((get) => {
-  get().fetchFilteredVehicles();
-}, 300);
 
 export const useVehicles = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       // State
       stats: null,
       allVehicles: [],
@@ -24,16 +19,15 @@ export const useVehicles = create(
           set({ isLoading: true, error: null });
           const [statsRes, allVehiclesRes] = await Promise.all([
             vehicleApi.getStats(),
-            vehicleApi.getVehicles(),
+            vehicleApi.getVehicles({}),
           ]);
 
-          set(state => ({
+          set({
             stats: statsRes,
             allVehicles: allVehiclesRes,
             filteredVehicles: allVehiclesRes,
             isLoading: false,
-            // ... (rest of the state update is the same)
-          }));
+          });
         } catch (e) {
           console.error('Initialization failed', e);
           set({ isLoading: false, error: 'Failed to load vehicle data.' });
@@ -43,7 +37,14 @@ export const useVehicles = create(
       fetchFilteredVehicles: async (filters) => {
         try {
           set({ isLoading: true, error: null });
-          const vehiclesRes = await vehicleApi.getVehicles(filters);
+          const apiParams = { ...filters };
+          for (const key in apiParams) {
+            if (Array.isArray(apiParams[key])) {
+              apiParams[key] = apiParams[key].join(',');
+            }
+          }
+
+          const vehiclesRes = await vehicleApi.getVehicles(apiParams);
           set({ filteredVehicles: vehiclesRes, isLoading: false });
         } catch (e) {
           console.error('Fetch filtered failed', e);

@@ -1,8 +1,11 @@
+name: wex-automotive   # Project name for containers, networks, volumes
+
 services:
   # The API Server Service
   server:
     build:
       context: ./server
+    image: wex-automotive/server:latest   # Explicit image name
     ports:
       - "5175:5175"
     volumes:
@@ -15,6 +18,7 @@ services:
   client:
     build:
       context: ./client
+    image: wex-automotive/client:latest   # Explicit image name
     ports:
       - "5173:80"
     depends_on:

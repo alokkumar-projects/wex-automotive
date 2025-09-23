@@ -1,25 +1,29 @@
-# --- Stage 1: Build the React application ---
+# --- Stage 1: Build the React/Vite application ---
 FROM node:18 AS build
 
 WORKDIR /usr/src/app
 
-# Copy ONLY package.json and package-lock.json to leverage Docker cache
+# Copy package files first
 COPY package*.json ./
 
-# Clean up and fresh install to fix Rollup native binary issue
-RUN rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
+# Remove existing node_modules & lockfile for clean install
+RUN rm -rf node_modules package-lock.json
 
-# Copy the rest of the source code
+# Install all deps (including dev) because build needs them
+RUN npm install --legacy-peer-deps
+
+# Copy rest of source
 COPY . .
 
-# Build the production-ready static files
+# If Rollup native binary fails, skip it
 ENV ROLLUP_SKIP_NATIVE=1
+
+# Run build
 RUN npm run build
 
-# --- Stage 2: Serve the static files with Nginx ---
+# --- Stage 2: Serve with nginx ---
 FROM nginx:stable-alpine
 
-# Copy the built static files from the 'build' stage
 COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 
 EXPOSE 80

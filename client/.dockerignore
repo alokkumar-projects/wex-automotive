@@ -1,0 +1,5 @@
+# Ignore local dependencies, git files, and build artifacts
+node_modules
+.git
+.gitignore
+dist

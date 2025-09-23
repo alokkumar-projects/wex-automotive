@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  # The API Server Service
+  server:
+    build:
+      context: ./server # Path to the server's Dockerfile
+    ports:
+      - "5175:5175" # Map host port 5175 to container port 5175
+    volumes:
+      # Mount the db.sqlite file into the container.
+      # This ensures the data is persisted even if the container is removed.
+      - ./server/db.sqlite:/usr/src/app/db.sqlite
+    environment:
+      - NODE_ENV=production
+      - PORT=5175
+
+  # The React Client Service
+  client:
+    build:
+      context: ./client # Path to the client's Dockerfile
+    ports:
+      - "5173:80" # Map host port 5173 to the Nginx container's port 80
+    depends_on:
+      - server # Ensures the server starts before the client

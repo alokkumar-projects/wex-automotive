@@ -1,26 +1,27 @@
 # --- Stage 1: Build the React application ---
-FROM node:18-alpine AS build
+FROM node:18 AS build
 
 WORKDIR /usr/src/app
 
-# Copy package files and install dependencies
+# Copy ONLY package.json and package-lock.json to leverage Docker cache
 COPY package*.json ./
-RUN npm install
+
+# Clean up and fresh install to fix Rollup native binary issue
+RUN rm -rf node_modules package-lock.json && npm install --legacy-peer-deps
 
 # Copy the rest of the source code
 COPY . .
 
 # Build the production-ready static files
+ENV ROLLUP_SKIP_NATIVE=1
 RUN npm run build
 
 # --- Stage 2: Serve the static files with Nginx ---
 FROM nginx:stable-alpine
 
-# Copy the built static files from the 'build' stage to the Nginx public directory
+# Copy the built static files from the 'build' stage
 COPY --from=build /usr/src/app/dist /usr/share/nginx/html
 
-# Expose port 80 for the Nginx server
 EXPOSE 80
 
-# The default Nginx command will start the server
 CMD ["nginx", "-g", "daemon off;"]

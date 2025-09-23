@@ -1,31 +1,20 @@
-# Stage 1: Use an official Node.js runtime as a parent image
-FROM node:18-alpine AS base
+# Use the standard node:18 image
+FROM node:18
 
-# Set the working directory in the container
 WORKDIR /usr/src/app
 
-# Copy package.json and package-lock.json
+# Copy package files first
 COPY package*.json ./
 
-# Stage 2: Install production dependencies
-FROM base AS production
-ENV NODE_ENV=production
+# Remove possible cached lockfile and node_modules (safety step)
+RUN rm -rf node_modules package-lock.json
+
 # Install only production dependencies
-RUN npm ci --only=production
-
-# Stage 3: Setup the final production image
-FROM base
-ENV NODE_ENV=production
-WORKDIR /usr/src/app
-
-# Copy the production dependencies from the 'production' stage
-COPY --from=production /usr/src/app/node_modules ./node_modules
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy the rest of the application code
 COPY . .
 
-# The application listens on port 5175, so we expose it
 EXPOSE 5175
 
-# Define the command to run the app
 CMD [ "node", "server.js" ]

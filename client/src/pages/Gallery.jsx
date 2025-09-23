@@ -4,7 +4,7 @@ import FilterPanel from '../components/FilterPanel.jsx';
 import VehicleCard from '../components/VehicleCard.jsx';
 import VehicleCardSkeleton from '../components/VehicleCardSkeleton.jsx';
 import EmptyState from '../components/EmptyState.jsx';
-import { useQueryParams, StringParam, ArrayParam, withDefault, DelimitedArrayParam } from 'use-query-params';
+import { useQueryParams, StringParam, withDefault, DelimitedArrayParam } from 'use-query-params';
 import debounce from 'lodash.debounce';
 
 export default function Gallery() {
@@ -13,8 +13,9 @@ export default function Gallery() {
 
   const [query, setQuery] = useQueryParams({
     searchTerm: withDefault(StringParam, ''),
-    origins: withDefault(ArrayParam, []),
-    cylinders: withDefault(ArrayParam, []),
+    // FIX: Use DelimitedArrayParam to send comma-separated strings to the API
+    origins: withDefault(DelimitedArrayParam, []),
+    cylinders: withDefault(DelimitedArrayParam, []),
     mpg: DelimitedArrayParam,
     weight: DelimitedArrayParam,
     horsepower: DelimitedArrayParam,
@@ -25,22 +26,20 @@ export default function Gallery() {
     order: withDefault(StringParam, undefined),
   });
 
-  // Use useCallback to ensure the debounced function reference is stable
   const debouncedFetch = useCallback(
     debounce((filters) => fetchFilteredVehicles(filters), 300),
     [fetchFilteredVehicles]
   );
 
-  // THE FIX: Stabilize the useEffect dependency by stringifying the query object.
+  // Stabilize the useEffect dependency by stringifying the query object.
   const queryString = JSON.stringify(query);
 
   useEffect(() => {
-    // We parse the string back into an object to pass to the fetch function
     const queryParams = JSON.parse(queryString);
     debouncedFetch(queryParams);
 
     return () => debouncedFetch.cancel();
-  }, [queryString, debouncedFetch]); // Now this only runs when the URL content actually changes.
+  }, [queryString, debouncedFetch]);
 
   const renderContent = () => {
     if (isLoading && filteredVehicles.length === 0) {

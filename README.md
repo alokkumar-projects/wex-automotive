@@ -6,13 +6,50 @@ This is a full-stack web application that allows users to explore a rich dataset
 
 ### High-Level Architecture
 
-This diagram provides a bird's-eye view of the system, showing the main components and how they interact.
+This diagram provides a comprehensive overview of the application's components, data flow, and infrastructure. The system is entirely containerized using Docker Compose, creating a clear separation between the client-side and server-side services.
+
+**Data Flow & Lifecycle:**
+
+1.  **Build/Seed Time:** The process begins with the raw `auto-mpg.csv` data file. A Node.js script (`db/seed.js`) is executed manually (`npm run db:seed`) to parse this file, clean the data, and populate a persistent **SQLite database file (`db.sqlite`)**.
+2.  **Runtime:** When a user accesses the application at `http://localhost:5173`, their browser receives a production-built React single-page application, served statically by an **Nginx** web server running in the `client` container.
+3.  **Interaction:** The React application, running in the user's browser, makes API calls to the backend. These requests are sent to `http://localhost:5175`, which is mapped to the `server` container.
+4.  **API & Database:** The **Fastify** server receives these API requests, queries the pre-populated SQLite database for the relevant vehicle data, and returns it to the client as a JSON payload. The SQLite database file is mounted into the server container via a Docker volume, ensuring data persistence.
+
+<!-- end list -->
 
 ```mermaid
-graph TD;
-    A[Client: React SPA <br/>(Vite, Zustand, Tailwind)] --> B(API Server: Fastify <br/> (Node.js));
-    B --> C{Database <br/> (SQLite)};
+graph TD
+    subgraph "Local Filesystem / Data Source"
+        E[fa:fa-file-csv auto-mpg.csv] -- "1. Parsed by" --> F((db/seed.js))
+        F -- "2. Populates" --> D_Vol[fa:fa-database db.sqlite Volume]
+    end
+
+    subgraph "User's Browser"
+        A[fa:fa-react React SPA]
+    end
+
+    subgraph "Docker Environment (Orchestrated by Docker Compose)"
+        subgraph "Client Service (Port 5173)"
+            B[fa:fa-server Nginx Web Server]
+        end
+
+        subgraph "Server Service (Port 5175)"
+            C[fa:fa-node-js Fastify API Server]
+            D_DB[fa:fa-database SQLite Database]
+            C <--> D_DB
+        end
+    end
+
+    B -- "3. Serves Static HTML/CSS/JS" --> A
+    A -- "4. API Request (e.g., GET /api/v1/vehicles)" --> C
+    C -- "5. Returns Vehicle Data (JSON)" --> A
+    D_Vol -- "Mounted Into Container" --> D_DB
+
+    style E fill:#2d8,stroke:#333,stroke-width:2px
+    style D_Vol fill:#f9f,stroke:#333,stroke-width:2px
 ```
+
+---
 
 ### Component Diagram
 
@@ -27,11 +64,11 @@ graph TD;
         B --> C[Dashboard Page];
         B --> D[Gallery Page];
         B --> E[Vehicle Detail Page];
-        F[useVehicles.js Store <br/>(Zustand)] --> G(Global State);
+        F["useVehicles.js Store <br/>(Zustand)"] --> G(Global State);
         C --> G;
         D --> G;
         E --> G;
-        H[vehicleApi.js] --> I(API Requests <br/> Axios);
+        H[vehicleApi.js] --> I("API Requests <br/> Axios");
         F --> H;
     end
 ```
@@ -47,6 +84,8 @@ graph TD;
         E[db/seed.js] -- populates --> D;
     end
 ```
+
+---
 
 ### Web Sequence Diagram (Filtering Vehicles)
 
@@ -70,10 +109,12 @@ sequenceDiagram
     Server->>Database: Queries with filter conditions
     Database-->>Server: Returns filtered vehicle data
     Server-->>vehicleApi.js: Returns JSON response
-    vehicleApi.js-->>Zustand Store: Returns data
-    Zustand Store-->>Gallery: Updates 'filteredVehicles' state
+    vehicleApi.js->>Zustand Store: Returns data
+    Zustand Store->>Gallery: Updates 'filteredVehicles' state
     Gallery-->>User: Re-renders to display filtered vehicles
 ```
+
+---
 
 ## Getting Started
 
@@ -90,8 +131,8 @@ To get the application up and running on your local machine, follow these simple
 1.  **Clone the repository:**
 
     ```bash
-    git clone <repository-url>
-    cd wex-automotive-fix-csv-parser-bom
+    git clone https://github.com/alokkumar-projects/wex-automotive.git
+    cd wex-automotive
     ```
 
 2.  **Seed the Database:**
@@ -113,6 +154,8 @@ To get the application up and running on your local machine, follow these simple
 
     The `--build` flag ensures that the Docker images are built before starting. The application will be available at `http://localhost:5173`.
 
+---
+
 ## Key Features
 
 ### Frontend (Client)
@@ -129,6 +172,8 @@ To get the application up and running on your local machine, follow these simple
 - **Efficient RESTful API:** Built with Fastify to serve cleaned and structured vehicle data and pre-calculated statistics.
 - **Data Processing:** The server reads from a tab-separated `auto-mpg.csv`, handles missing values, and normalizes headers before populating the database.
 
+---
+
 ## Technology Stack
 
 | Area         | Technology                                                                                              |
@@ -137,6 +182,8 @@ To get the application up and running on your local machine, follow these simple
 | **Backend**  | Node.js, Fastify, SQLite3                                                                               |
 | **DevOps**   | Docker, Docker Compose                                                                                  |
 | **Testing**  | Vitest, React Testing Library                                                                           |
+
+---
 
 ## API Endpoints
 

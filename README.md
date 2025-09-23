@@ -1,3 +1,4 @@
+---
 # WEX Automotive Data Explorer
 
 This is a full-stack web application that allows users to explore a rich dataset of automotive information from 1970–1982. The application is architected with a modern stack, featuring a React frontend and a Fastify backend server, both containerized with Docker for easy setup and deployment.
@@ -6,7 +7,6 @@ This is a full-stack web application that allows users to explore a rich dataset
 
 - **Frontend (Vercel):** [https://wex-automotive.vercel.app](https://wex-automotive.vercel.app)
 - **Backend (Render):** [https://wex-automotive-server.onrender.com](https://wex-automotive-server.onrender.com)
-
 ---
 
 ## Architecture & Design

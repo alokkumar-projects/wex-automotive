@@ -15,65 +15,56 @@ This application is designed with two distinct environments in mind: a cloud-nat
 
 ### Production Architecture (Vercel & Render)
 
-The live application is deployed across specialized cloud platforms for optimal performance and scalability. The frontend is hosted on **Vercel**, while the backend API and its database are hosted on **Render**.
-
 ```mermaid
 graph TD
     subgraph "User"
-        A[fa:fa-user User's Browser]
+        A[User's Browser]
     end
 
     subgraph "Production Environment"
         subgraph "Vercel Platform"
-            B[fa:fa-react React SPA Frontend\nwex-automotive.vercel.app]
+            B[React SPA Frontend\nwex-automotive.vercel.app]
         end
 
         subgraph "Render Platform"
-            C[fa:fa-node-js Fastify API Server\nwex-automotive-server.onrender.com]
-            D[fa:fa-database Production Database\n(e.g. Render PostgreSQL)]
+            C[Fastify API Server\nwex-automotive-server.onrender.com]
+            D[Production Database\nRender PostgreSQL]
             C <--> D
         end
     end
 
     subgraph "One-Time Data Seeding"
-        E[fa:fa-file-csv auto-mpg.csv] --> F((db/seed.js))
+        E[auto-mpg.csv] --> F((db/seed.js))
         F -- "Populates" --> D
     end
 
     A -- "Views Site" --> B
     B -- "API Calls" --> C
-
-    classDef vercel fill:#f2f2f2,stroke:#000,stroke-width:2px;
-    classDef render fill:#e6f9f0,stroke:#46a36c,stroke-width:2px;
-    class B vercel;
-    class C,D render;
 ```
 
 ---
 
 ### Local Development Architecture (Docker Compose)
 
-For local development, the application is orchestrated using **Docker Compose**.
-
 ```mermaid
 graph TD
     subgraph "Developer's Machine"
-        A[fa:fa-user Browser @ localhost:5173]
+        A[Browser @ localhost:5173]
 
         subgraph "Docker Environment (Docker Compose)"
             subgraph "Client Service (Port 5173)"
-                B[fa:fa-server Nginx Server]
+                B[Nginx Server]
             end
 
             subgraph "Server Service (Port 5175)"
-                C[fa:fa-node-js Fastify Server]
-                D[fa:fa-database SQLite Database]
+                C[Fastify Server]
+                D[SQLite Database]
                 C <--> D
             end
         end
 
         subgraph "Local Filesystem"
-             E[fa:fa-file db.sqlite file]
+             E[db.sqlite file]
         end
     end
 
@@ -107,7 +98,7 @@ graph TD
         E --> G
         N --> G
 
-        H[vehicleApi.js] --> I("API Requests\nAxios")
+        H[vehicleApi.js] --> I(API Requests via Axios)
         F --> H
 
         J[AuthContext.jsx] --> K(User State)

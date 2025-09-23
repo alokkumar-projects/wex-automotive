@@ -14,6 +14,40 @@ Backend (Render): [https://wex-automotive-server.onrender.com](https://wex-autom
 
 This diagram provides a comprehensive overview of the application's components, data flow, and infrastructure. The system is entirely containerized using Docker Compose, creating a clear separation between the client-side and server-side services.
 
+```mermaid
+graph TD
+    subgraph "User's Browser"
+        A[fa:fa-react React SPA]
+    end
+
+    subgraph "Docker Environment (Orchestrated by Docker Compose)"
+        subgraph "Client Service (Port 5173)"
+            B[fa:fa-server Nginx Web Server]
+        end
+
+        subgraph "Server Service (Port 5175)"
+            C[fa:fa-node-js Fastify API Server]
+            D_DB[fa:fa-database SQLite Database]
+            C <--> D_DB
+        end
+    end
+
+    subgraph "Local Filesystem / Data Source"
+        E[fa:fa-file-csv auto-mpg.csv] -- "1. Parsed by" --> F((db/seed.js))
+        F -- "2. Populates" --> D_Vol[fa:fa-database db.sqlite Volume]
+    end
+
+    B -- "3. Serves Static HTML/CSS/JS" --> A
+    A -- "4. API Request (e.g., GET /api/v1/vehicles)" --> C
+    C -- "5. Returns Vehicle Data (JSON)" --> A
+    A -- "6. API Request (e.g., POST /api/v1/auth/login)" --> C
+    C -- "7. Returns User Data (JSON)" --> A
+    D_Vol -- "Mounted Into Container" --> D_DB
+
+    style E fill:#2d8,stroke:#333,stroke-width:2px
+    style D_Vol fill:#f9f,stroke:#333,stroke-width:2px
+```
+
 **Data Flow & Lifecycle:**
 
 1.  **Build/Seed Time**: The process begins with the raw `auto-mpg.csv` data file. A Node.js script (`db/seed.js`) is executed manually (`npm run db:seed`) to parse this file, clean the data, and populate a persistent **SQLite database file (`db.sqlite`)**.

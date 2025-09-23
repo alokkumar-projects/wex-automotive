@@ -139,6 +139,8 @@ To get the application up and running on your local machine, follow these simple
     ```bash
     git clone https://github.com/alokkumar-projects/wex-automotive.git
     cd wex-automotive
+    git fetch origin
+    git checkout feature/wex-automative-explorer
     ```
 
 2.  **Seed the Database:**

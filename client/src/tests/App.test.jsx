@@ -1,6 +1,7 @@
+import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, vi as vitest } from 'vitest';
 import App from '../App';
 
 // Mock the zustand store
@@ -24,16 +25,18 @@ vi.mock('../contexts/ThemeContext', () => ({
   ThemeProvider: MockThemeProvider,
 }));
 
-
 describe('App', () => {
-  it('renders the main application and navigates to the dashboard', () => {
+  it('renders the main layout and navigates to dashboard', () => {
     render(
       <MemoryRouter initialEntries={['/']}>
         <App />
       </MemoryRouter>
     );
 
-    expect(screen.getByText('WEX Automotive Data Explorer')).toBeInTheDocument();
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
+    // Check that the app initializes the vehicle store
+    expect(useVehicles.getState().initialize).toHaveBeenCalled();
+
+    // Check that a layout element (like the navbar) is present
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 });

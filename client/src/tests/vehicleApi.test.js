@@ -1,6 +1,6 @@
-import { describe, it, expect, vi } from 'vitest';
-import axios from 'axios';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { vehicleApi } from '../api/vehicleApi';
+import axios from 'axios';
 
 // Define the mock object before the vi.mock call
 const mockAxios = {
@@ -15,13 +15,9 @@ vi.mock('axios', () => ({
 }));
 
 describe('vehicleApi', () => {
-  it('fetches stats correctly', async () => {
-    const mockStats = { origins: ['USA', 'Japan'] };
-    mockAxios.get.mockResolvedValue({ data: mockStats });
-
-    const stats = await vehicleApi.getStats();
-    expect(stats).toEqual(mockStats);
-    expect(mockAxios.get).toHaveBeenCalledWith('/api/v1/stats');
+  beforeEach(() => {
+    // Reset mocks before each test
+    mockAxios.get.mockReset();
   });
 
   it('fetches vehicles with correct parameters', async () => {
@@ -33,5 +29,14 @@ describe('vehicleApi', () => {
 
     expect(vehicles).toEqual(mockVehicles);
     expect(mockAxios.get).toHaveBeenCalledWith('/api/v1/vehicles', { params });
+  });
+
+  it('fetches stats correctly', async () => {
+    const mockStats = { origins: ['USA', 'Japan'] };
+    mockAxios.get.mockResolvedValue({ data: mockStats });
+
+    const stats = await vehicleApi.getStats();
+    expect(stats).toEqual(mockStats);
+    expect(mockAxios.get).toHaveBeenCalledWith('/api/v1/stats');
   });
 });

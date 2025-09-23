@@ -12,6 +12,7 @@
     "@fastify/cors": "^8.4.1",
     "csv-parse": "^5.6.0",
     "fastify": "^4.27.2",
-    "sqlite3": "^5.1.7"
+    "sqlite3": "^5.1.7",
+    "dotenv": "^16.4.5"
   }
 }

@@ -1,61 +1,63 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
+import dotenv from 'dotenv';
 import { getStats } from './utils/data.js';
 import { vehicleService } from './services/vehicleService.js';
+
+// Load environment variables
+dotenv.config();
 
 const fastify = Fastify({ logger: true });
 await fastify.register(cors, { origin: true });
 
+// --- Centralized Error Handler ---
+fastify.setErrorHandler((error, request, reply) => {
+  fastify.log.error(error);
+  // Send a generic error response
+  reply.status(500).send({ error: 'Internal Server Error' });
+});
 
-// --- API Route Definitions ---
+// --- API Schema for Validation ---
+const vehicleQuerySchema = {
+  querystring: {
+    type: 'object',
+    properties: {
+      searchTerm: { type: 'string' },
+      origins: { type: 'string' },
+      cylinders: { type: 'string' },
+      sortBy: { type: 'string', enum: ['mpg', 'weight', 'horsepower', 'modelYear'] },
+      order: { type: 'string', enum: ['asc', 'desc'] },
+      mpg: { type: 'string', pattern: '^\\d+(\\.\\d+)?,\\d+(\\.\\d+)?$' },
+      weight: { type: 'string', pattern: '^\\d+,\\d+$' },
+      horsepower: { type: 'string', pattern: '^\\d+,\\d+$' },
+      displacement: { type: 'string', pattern: '^\\d+,\\d+$' },
+      acceleration: { type: 'string', pattern: '^\\d+(\\.\\d+)?,\\d+(\\.\\d+)?$' },
+      modelYear: { type: 'string', pattern: '^\\d+,\\d+$' },
+    },
+  }
+};
+
+// --- API Route Definitions (v1) ---
 
 fastify.get('/', async () => ({ status: 'ok', service: 'wex-automotive-api' }));
 
-/**
- * Route to get calculated statistics for the entire dataset.
- */
-fastify.get('/api/stats', async (req, reply) => {
-  try {
-    const allVehicles = await vehicleService.getAllForStats();
-    // The getStats utility is still useful for calculating ranges, averages, etc.
-    return getStats(allVehicles);
-  } catch (err) {
-    fastify.log.error(err, 'Failed to fetch stats');
-    reply.code(500).send({ error: 'Internal Server Error' });
-  }
+fastify.get('/api/v1/stats', async (req, reply) => {
+  const allVehicles = await vehicleService.getAllForStats();
+  return getStats(allVehicles);
 });
 
-/**
- * Route to get a list of vehicles based on query parameters for filtering and sorting.
- */
-fastify.get('/api/vehicles', async (req, reply) => {
-  try {
-    // Pass the entire query object directly to the service
-    const vehicles = await vehicleService.getAll(req.query);
-    return vehicles;
-  } catch (err) {
-    fastify.log.error(err, 'Failed to query vehicles');
-    reply.code(500).send({ error: 'Internal Server Error' });
-  }
+fastify.get('/api/v1/vehicles', { schema: vehicleQuerySchema }, async (req, reply) => {
+  const vehicles = await vehicleService.getAll(req.query);
+  return vehicles;
 });
 
-/**
- * Route to get a single vehicle by its ID.
- */
-fastify.get('/api/vehicles/:id', async (req, reply) => {
-  try {
-    const id = Number(req.params.id);
-    const vehicle = await vehicleService.getById(id);
-
-    if (!vehicle) {
-      reply.code(404).send({ error: 'Vehicle not found' });
-      return;
-    }
-    return vehicle;
-  } catch (err) {
-    fastify.log.error(err, 'Failed to fetch vehicle by ID');
-    reply.code(500).send({ error: 'Internal Server Error' });
+fastify.get('/api/v1/vehicles/:id', async (req, reply) => {
+  const id = Number(req.params.id);
+  const vehicle = await vehicleService.getById(id);
+  if (!vehicle) {
+    return reply.code(404).send({ error: 'Vehicle not found' });
   }
+  return vehicle;
 });
 
 

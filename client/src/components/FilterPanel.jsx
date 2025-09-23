@@ -1,8 +1,13 @@
 import React from 'react';
 import { useVehicles } from '../store/useVehicles.js';
+import LoadingSpinner from './LoadingSpinner.jsx';
+import { StringParam, ArrayParam, NumberParam, withDefault } from 'use-query-params';
+
 
 function Range({ label, value, onChange, min, max, step = 1 }) {
-  const [lo, hi] = value;
+  // Guard against the initial render when stats might not be ready.
+  const [lo, hi] = value || [min, max];
+  
   return (
     <div>
       <div className="flex justify-between text-sm">
@@ -21,22 +26,46 @@ function Range({ label, value, onChange, min, max, step = 1 }) {
   );
 }
 
-export default function FilterPanel() {
-  const { stats, filters, setFilter, searchTerm, setSearchTerm, setSortConfig } = useVehicles();
+export default function FilterPanel({ query, setQuery }) {
+  const { stats } = useVehicles();
 
-  if (!stats) return null;
+  if (!stats) {
+    return (
+      <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">
+        <LoadingSpinner />
+      </div>
+    );
+  }
 
-  const toggleMulti = (key, value) => {
-    const cur = new Set(filters[key]);
-    cur.has(value) ? cur.delete(value) : cur.add(value);
-    setFilter(key, Array.from(cur));
+  const handleSearchChange = (e) => {
+    setQuery({ searchTerm: e.target.value || undefined }, 'replaceIn');
   };
+
+  const toggleMultiSelect = (key, value) => {
+    const currentValues = query[key] || [];
+    const newValues = currentValues.includes(value)
+      ? currentValues.filter((item) => item !== value)
+      : [...currentValues, value];
+    setQuery({ [key]: newValues.length ? newValues : undefined }, 'replaceIn');
+  };
+
+  const handleRangeChange = (key, value) => {
+    setQuery({ [key]: value }, 'replaceIn');
+  }
+
+  const handleSortChange = (e) => {
+    const [key, direction] = e.target.value.split(':');
+    setQuery({ 
+      sortBy: key || undefined, 
+      order: direction || undefined 
+    }, 'replaceIn');
+  }
 
   return (
     <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">
       <input
-        value={searchTerm}
-        onChange={(e) => setSearchTerm(e.target.value)}
+        value={query.searchTerm || ''}
+        onChange={handleSearchChange}
         placeholder="Search car name..."
         className="w-full border rounded px-3 py-2"
       />
@@ -45,8 +74,8 @@ export default function FilterPanel() {
         <div className="text-sm font-semibold mb-2">Origin</div>
         <div className="flex flex-wrap gap-2">
           {stats.origins.map(o => (
-            <label key={o} className={`px-2 py-1 rounded border cursor-pointer ${filters.origins.includes(o) ? 'bg-slate-900 text-white' : 'bg-white text-slate-700'}`}>
-              <input type="checkbox" className="hidden" checked={filters.origins.includes(o)} onChange={() => toggleMulti('origins', o)} />
+            <label key={o} className={`px-2 py-1 rounded border cursor-pointer ${(query.origins || []).includes(o) ? 'bg-slate-900 text-white' : 'bg-white text-slate-700'}`}>
+              <input type="checkbox" className="hidden" checked={(query.origins || []).includes(o)} onChange={() => toggleMultiSelect('origins', o)} />
               {o}
             </label>
           ))}
@@ -57,28 +86,26 @@ export default function FilterPanel() {
         <div className="text-sm font-semibold mb-2">Cylinders</div>
         <div className="flex flex-wrap gap-2">
           {stats.cylinders.map(c => (
-            <label key={c} className={`px-2 py-1 rounded border cursor-pointer ${filters.cylinders.includes(c) ? 'bg-slate-900 text-white' : 'bg-white text-slate-700'}`}>
-              <input type="checkbox" className="hidden" checked={filters.cylinders.includes(c)} onChange={() => toggleMulti('cylinders', c)} />
+            <label key={c} className={`px-2 py-1 rounded border cursor-pointer ${(query.cylinders || []).includes(String(c)) ? 'bg-slate-900 text-white' : 'bg-white text-slate-700'}`}>
+              <input type="checkbox" className="hidden" checked={(query.cylinders || []).includes(String(c))} onChange={() => toggleMultiSelect('cylinders', String(c))} />
               {c}
             </label>
           ))}
         </div>
       </div>
 
-      <Range label="MPG" value={filters.mpg} min={stats.mpgRange[0]} max={stats.mpgRange[1]} onChange={(v) => setFilter('mpg', v)} step={0.1} />
-      <Range label="Weight" value={filters.weight} min={stats.weightRange[0]} max={stats.weightRange[1]} onChange={(v) => setFilter('weight', v)} step={1} />
-      <Range label="Horsepower" value={filters.horsepower} min={stats.horsepowerRange[0]} max={stats.horsepowerRange[1]} onChange={(v) => setFilter('horsepower', v)} step={1} />
-      <Range label="Displacement" value={filters.displacement} min={stats.displacementRange[0]} max={stats.displacementRange[1]} onChange={(v) => setFilter('displacement', v)} step={1} />
-      <Range label="Acceleration" value={filters.acceleration} min={stats.accelerationRange[0]} max={stats.accelerationRange[1]} onChange={(v) => setFilter('acceleration', v)} step={0.1} />
-      <Range label="Model Year" value={filters.modelYear} min={stats.modelYearRange[0]} max={stats.modelYearRange[1]} onChange={(v) => setFilter('modelYear', v)} step={1} />
+      <Range label="MPG" value={query.mpg} min={stats.mpgRange[0]} max={stats.mpgRange[1]} onChange={(v) => handleRangeChange('mpg', v)} step={0.1} />
+      <Range label="Weight" value={query.weight} min={stats.weightRange[0]} max={stats.weightRange[1]} onChange={(v) => handleRangeChange('weight', v)} step={1} />
+      <Range label="Horsepower" value={query.horsepower} min={stats.horsepowerRange[0]} max={stats.horsepowerRange[1]} onChange={(v) => handleRangeChange('horsepower', v)} step={1} />
+      <Range label="Displacement" value={query.displacement} min={stats.displacementRange[0]} max={stats.displacementRange[1]} onChange={(v) => handleRangeChange('displacement', v)} step={1} />
+      <Range label="Acceleration" value={query.acceleration} min={stats.accelerationRange[0]} max={stats.accelerationRange[1]} onChange={(v) => handleRangeChange('acceleration', v)} step={0.1} />
+      <Range label="Model Year" value={query.modelYear} min={stats.modelYearRange[0]} max={stats.modelYearRange[1]} onChange={(v) => handleRangeChange('modelYear', v)} step={1} />
 
       <div>
         <div className="text-sm font-semibold mb-2">Sort</div>
         <select
-          onChange={(e) => {
-            const [key, direction] = e.target.value.split(':');
-            setSortConfig({ key: key || null, direction: direction || 'asc' });
-          }}
+          value={`${query.sortBy || ''}:${query.order || 'asc'}`}
+          onChange={handleSortChange}
           className="border rounded px-3 py-2 w-full"
         >
           <option value=":asc">None</option>

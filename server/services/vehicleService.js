@@ -55,12 +55,12 @@ export class VehicleService {
       query += ' AND carName LIKE ?';
       params.push(`%${searchTerm}%`);
     }
-    if (origins) {
+    if (origins && origins.length > 0) {
       const originList = String(origins).split(',');
       query += ` AND origin IN (${originList.map(() => '?').join(',')})`;
       params.push(...originList);
     }
-    if (cylinders) {
+    if (cylinders && cylinders.length > 0) {
       const cylinderList = String(cylinders).split(',');
       query += ` AND cylinders IN (${cylinderList.map(() => '?').join(',')})`;
       params.push(...cylinderList);

@@ -38,6 +38,10 @@ export class VehicleService {
       mpg, weight, horsepower, displacement, acceleration, modelYear
     } = filters;
 
+    // Explicitly handle pagination parameters and convert to numbers
+    const page = Number(filters.page) || 1;
+    const limit = Number(filters.limit) || 20;
+
     let query = 'SELECT * FROM vehicles WHERE 1=1';
     const params = [];
 
@@ -76,6 +80,11 @@ export class VehicleService {
     if (sortBy && ['mpg', 'weight', 'horsepower', 'modelYear'].includes(sortBy)) {
       query += ` ORDER BY ${sortBy} ${order.toUpperCase() === 'DESC' ? 'DESC' : 'ASC'}`;
     }
+
+    // Add pagination logic
+    const offset = (page - 1) * limit;
+    query += ` LIMIT ? OFFSET ?`;
+    params.push(limit, offset);
 
     return this._dbAll(query, params);
   }

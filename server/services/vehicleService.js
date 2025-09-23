@@ -30,7 +30,40 @@ export class VehicleService {
     });
   }
 
+  _dbRun(query, params = []) {
+    return new Promise((resolve, reject) => {
+      this.db.run(query, params, function (err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ id: this.lastID });
+        }
+      });
+    });
+  }
+
   // --- Public Service Methods ---
+
+  async register(username, password) {
+    const user = await this.getUserByUsername(username);
+    if (user) {
+      throw new Error('User already exists');
+    }
+    return this._dbRun('INSERT INTO users (username, password) VALUES (?, ?)', [username, password]);
+  }
+
+  async login(username, password) {
+    const user = await this._dbGet('SELECT * FROM users WHERE username = ? AND password = ?', [username, password]);
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+    return user;
+  }
+
+  async getUserByUsername(username) {
+    return this._dbGet('SELECT * FROM users WHERE username = ?', [username]);
+  }
+
 
   async getAll(filters = {}) {
     const {
@@ -135,5 +168,26 @@ export class VehicleService {
     `;
     const params = [origin, modelYear, id];
     return this._dbAll(query, params);
+  }
+
+  // --- Favorites Methods ---
+
+  async getFavorites(userId) {
+    const query = `
+      SELECT v.* FROM vehicles v
+      JOIN user_favorites uf ON v.id = uf.vehicle_id
+      WHERE uf.user_id = ?
+    `;
+    return this._dbAll(query, [userId]);
+  }
+
+  async addFavorite(userId, vehicleId) {
+    const query = 'INSERT INTO user_favorites (user_id, vehicle_id) VALUES (?, ?)';
+    return this._dbRun(query, [userId, vehicleId]);
+  }
+
+  async removeFavorite(userId, vehicleId) {
+    const query = 'DELETE FROM user_favorites WHERE user_id = ? AND vehicle_id = ?';
+    return this._dbRun(query, [userId, vehicleId]);
   }
 }

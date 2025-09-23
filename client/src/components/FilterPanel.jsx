@@ -20,6 +20,15 @@ export default function FilterPanel({ query, setQuery, isLoading }) {
     );
   }
 
+  // Helper function to ensure range values are numbers for the Slider component
+  const getNumericRange = (key, fallbackRange) => {
+    const value = query[key];
+    if (Array.isArray(value) && value.length === 2 && value.every(v => v != null && !isNaN(v))) {
+      return value.map(Number);
+    }
+    return fallbackRange;
+  };
+
   const searchVehicles = (event) => {
     const query = event.query.toLowerCase();
     const filteredNames = vehicleNames.filter((name) =>
@@ -107,7 +116,7 @@ export default function FilterPanel({ query, setQuery, isLoading }) {
           <span>{query.mpg ? `${query.mpg[0]} – ${query.mpg[1]}` : `${stats.mpgRange[0]} – ${stats.mpgRange[1]}`}</span>
         </label>
         <Slider
-          value={query.mpg || stats.mpgRange}
+          value={getNumericRange('mpg', stats.mpgRange)}
           onChange={(e) => handleRangeChange('mpg', e.value)}
           min={stats.mpgRange[0]}
           max={stats.mpgRange[1]}
@@ -122,7 +131,7 @@ export default function FilterPanel({ query, setQuery, isLoading }) {
           <span>{query.weight ? `${query.weight[0]} – ${query.weight[1]}` : `${stats.weightRange[0]} – ${stats.weightRange[1]}`}</span>
         </label>
         <Slider
-          value={query.weight || stats.weightRange}
+          value={getNumericRange('weight', stats.weightRange)}
           onChange={(e) => handleRangeChange('weight', e.value)}
           min={stats.weightRange[0]}
           max={stats.weightRange[1]}
@@ -136,7 +145,7 @@ export default function FilterPanel({ query, setQuery, isLoading }) {
           <span>{query.horsepower ? `${query.horsepower[0]} – ${query.horsepower[1]}` : `${stats.horsepowerRange[0]} – ${stats.horsepowerRange[1]}`}</span>
         </label>
         <Slider
-          value={query.horsepower || stats.horsepowerRange}
+          value={getNumericRange('horsepower', stats.horsepowerRange)}
           onChange={(e) => handleRangeChange('horsepower', e.value)}
           min={stats.horsepowerRange[0]}
           max={stats.horsepowerRange[1]}
@@ -150,7 +159,7 @@ export default function FilterPanel({ query, setQuery, isLoading }) {
           <span>{query.displacement ? `${query.displacement[0]} – ${query.displacement[1]}` : `${stats.displacementRange[0]} – ${stats.displacementRange[1]}`}</span>
         </label>
         <Slider
-          value={query.displacement || stats.displacementRange}
+          value={getNumericRange('displacement', stats.displacementRange)}
           onChange={(e) => handleRangeChange('displacement', e.value)}
           min={stats.displacementRange[0]}
           max={stats.displacementRange[1]}
@@ -164,7 +173,7 @@ export default function FilterPanel({ query, setQuery, isLoading }) {
           <span>{query.acceleration ? `${query.acceleration[0]} – ${query.acceleration[1]}` : `${stats.accelerationRange[0]} – ${stats.accelerationRange[1]}`}</span>
         </label>
         <Slider
-          value={query.acceleration || stats.accelerationRange}
+          value={getNumericRange('acceleration', stats.accelerationRange)}
           onChange={(e) => handleRangeChange('acceleration', e.value)}
           min={stats.accelerationRange[0]}
           max={stats.accelerationRange[1]}

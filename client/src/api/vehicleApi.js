@@ -9,6 +9,14 @@ const apiClient = axios.create({
 });
 
 export const vehicleApi = {
+  async login(username, password) {
+    const response = await apiClient.post('/api/v1/auth/login', { username, password });
+    return response.data;
+  },
+  async signup(username, password) {
+    const response = await apiClient.post('/api/v1/auth/register', { username, password });
+    return response.data;
+  },
   async getStats() {
     const response = await apiClient.get('/api/v1/stats');
     return response.data;
@@ -34,6 +42,18 @@ export const vehicleApi = {
   },
   async getRelatedVehicles(id) {
     const response = await apiClient.get(`/api/v1/vehicles/${id}/related`);
+    return response.data;
+  },
+  async getFavorites(userId) {
+    const response = await apiClient.get(`/api/v1/favorites/${userId}`);
+    return response.data;
+  },
+  async addFavorite(userId, vehicleId) {
+    const response = await apiClient.post('/api/v1/favorites', { userId, vehicleId });
+    return response.data;
+  },
+  async removeFavorite(userId, vehicleId) {
+    const response = await apiClient.delete('/api/v1/favorites', { data: { userId, vehicleId } });
     return response.data;
   }
 };

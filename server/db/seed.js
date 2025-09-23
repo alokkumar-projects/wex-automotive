@@ -89,6 +89,28 @@ async function seedDatabase() {
 
     stmt.finalize();
     console.log(`Successfully inserted ${vehicles.length} vehicles.`);
+
+    // Create users table
+    console.log('Creating users table...');
+    db.run(`
+      CREATE TABLE users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+      )
+    `);
+
+    // Create user_favorites table
+    console.log('Creating user_favorites table...');
+    db.run(`
+      CREATE TABLE user_favorites (
+        user_id INTEGER,
+        vehicle_id INTEGER,
+        FOREIGN KEY (user_id) REFERENCES users (id),
+        FOREIGN KEY (vehicle_id) REFERENCES vehicles (id),
+        PRIMARY KEY (user_id, vehicle_id)
+      )
+    `);
   });
 
   db.close();

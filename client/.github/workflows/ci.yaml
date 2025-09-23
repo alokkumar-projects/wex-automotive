@@ -1,0 +1,60 @@
+name: WEX Automotive CI/CD
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      # --- Server Tests ---
+      - name: Install server dependencies
+        run: npm install
+        working-directory: ./server
+
+      - name: Run server tests
+        run: npm test
+        working-directory: ./server
+
+      # --- Client Tests ---
+      - name: Install client dependencies
+        run: npm install
+        working-directory: ./client
+
+      - name: Run client tests
+        run: npm test
+        working-directory: ./client
+
+      # --- Docker Image Build & Push ---
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push server image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./server
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/wex-automotive-server:latest
+
+      - name: Build and push client image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./client
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/wex-automotive-client:latest

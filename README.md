@@ -2,63 +2,30 @@
 
 This is a full-stack web application that allows users to explore a rich dataset of automotive information from 1970-1982. The application is architected with a modern stack, featuring a React frontend and a Fastify backend server, both containerized with Docker for easy setup and deployment.
 
-Live Production URLs
-Frontend (Vercel): https://wex-automotive.vercel.app
+**Live Production URLs**
+Frontend (Vercel): [https://wex-automotive.vercel.app](https://wex-automotive.vercel.app)
+Backend (Render): [https://wex-automotive-server.onrender.com](https://wex-automotive-server.onrender.com)
 
-Backend (Render): https://wex-automotive-server.onrender.com
+---
 
 ## Architecture & Design
 
-### High-Level Architecture
+### High-Level Design (HLD)
 
 This diagram provides a comprehensive overview of the application's components, data flow, and infrastructure. The system is entirely containerized using Docker Compose, creating a clear separation between the client-side and server-side services.
 
 **Data Flow & Lifecycle:**
 
 1.  **Build/Seed Time**: The process begins with the raw `auto-mpg.csv` data file. A Node.js script (`db/seed.js`) is executed manually (`npm run db:seed`) to parse this file, clean the data, and populate a persistent **SQLite database file (`db.sqlite`)**.
-2.  **Runtime**: When a user accesses the application at `http://localhost:5173`, their browser receives a production-built React single-page application, served statically by an **Nginx** web server running in the `client` container.
-3.  **Interaction**: The React application, running in the user's browser, makes API calls to the backend. These requests are sent to `http://localhost:5175`, which is mapped to the `server` container.
+2.  **Runtime**: When a user accesses the application, their browser receives a production-built React single-page application, served statically by an **Nginx** web server running in the `client` container.
+3.  **Interaction**: The React application, running in the user's browser, makes API calls to the backend.
 4.  **API & Database**: The **Fastify** server receives these API requests, queries the pre-populated SQLite database for the relevant vehicle data, and returns it to the client as a JSON payload. The SQLite database file is mounted into the server container via a Docker volume, ensuring data persistence.
-
-### High-Level Architecture
-
-### Detailed Component Architecture
-
-```mermaid
-graph TD
-    subgraph "Local Filesystem / Data Source"
-        E[fa:fa-file-csv auto-mpg.csv] -- "1. Parsed by" --> F((db/seed.js))
-        F -- "2. Populates" --> D_Vol[fa:fa-database db.sqlite Volume]
-    end
-
-    subgraph "User's Browser"
-        A[fa:fa-react React SPA]
-    end
-
-    subgraph "Docker Environment (Orchestrated by Docker Compose)"
-        subgraph "Client Service (Port 5173)"
-            B[fa:fa-server Nginx Web Server]
-        end
-
-        subgraph "Server Service (Port 5175)"
-            C[fa:fa-node-js Fastify API Server]
-            D_DB[fa:fa-database SQLite Database]
-            C <--> D_DB
-        end
-    end
-
-    B -- "3. Serves Static HTML/CSS/JS" --> A
-    A -- "4. API Request (e.g., GET /api/v1/vehicles)" --> C
-    C -- "5. Returns Vehicle Data (JSON)" --> A
-    D_Vol -- "Mounted Into Container" --> D_DB
-
-    style E fill:#2d8,stroke:#333,stroke-width:2px
-    style D_Vol fill:#f9f,stroke:#333,stroke-width:2px
-```
 
 ---
 
-### Component Diagram
+### Low-Level Design (LLD)
+
+#### Component Diagrams
 
 This provides a more detailed look at the internal components of the client and server applications.
 
@@ -71,14 +38,23 @@ graph TD;
         B --> C[Dashboard Page];
         B --> D[Gallery Page];
         B --> E[Vehicle Detail Page];
+        B --> L[Login Page];
+        B --> M[Signup Page];
+        B --> N[Favorites Page];
+
         F["useVehicles.js Store <br/>(Zustand)"] --> G(Global State);
         C --> G;
         D --> G;
         E --> G;
+        N --> G;
+
         H[vehicleApi.js] --> I("API Requests <br/> Axios");
         F --> H;
-        J[ThemeContext.jsx] --> K(Theme Management);
+
+        J[AuthContext.jsx] --> K(User State);
         A --> K;
+        L --> K;
+        M --> K;
     end
 ```
 
@@ -96,7 +72,33 @@ graph TD;
 
 ---
 
-### Web Sequence Diagram (Filtering Vehicles)
+#### Web Sequence Diagrams
+
+**User Login Sequence**
+
+This diagram illustrates the flow of a user logging into the application.
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Login Page (React)
+    participant AuthContext
+    participant vehicleApi.js
+    participant Server (Fastify)
+    participant Database (SQLite)
+
+    User->>Login Page (React): Enters credentials and clicks "Login"
+    Login Page (React)->>AuthContext: calls login(username, password)
+    AuthContext->>vehicleApi.js: login(username, password)
+    vehicleApi.js->>Server (Fastify): POST /api/v1/auth/login
+    Server (Fastify)->>Database (SQLite): SELECT * FROM users WHERE username = ?
+    Database (SQLite)-->>Server (Fastify): Returns user record
+    Server (Fastify)-->>vehicleApi.js: Returns user object
+    vehicleApi.js->>AuthContext: Returns user data
+    AuthContext->>Login Page (React): Updates user state, redirects to dashboard
+```
+
+**Filtering Vehicles Sequence**
 
 This diagram illustrates the flow of a common user action: applying a filter in the vehicle gallery.
 
@@ -111,16 +113,16 @@ sequenceDiagram
     participant Database (SQLite)
 
     User->>FilterPanel: Selects a filter (e.g., clicks 'Japan')
-    FilterPanel->>Gallery: Updates URL query parameters
-    Gallery->>Zustand Store: Calls fetchFilteredVehicles(filters)
+    FilterPanel->>Gallery (React): Updates URL query parameters
+    Gallery (React)->>Zustand Store: Calls fetchFilteredVehicles(filters)
     Zustand Store->>vehicleApi.js: getVehicles(filters)
-    vehicleApi.js->>Server: GET /api/v1/vehicles?origins=Japan
-    Server->>Database: Queries with filter conditions
-    Database-->>Server: Returns filtered vehicle data
-    Server-->>vehicleApi.js: Returns JSON response
+    vehicleApi.js->>Server (Fastify): GET /api/v1/vehicles?origins=Japan
+    Server (Fastify)->>Database (SQLite): Queries with filter conditions
+    Database (SQLite)-->>Server (Fastify): Returns filtered vehicle data
+    Server (Fastify)-->>vehicleApi.js: Returns JSON response
     vehicleApi.js->>Zustand Store: Returns data
-    Zustand Store->>Gallery: Updates 'filteredVehicles' state
-    Gallery-->>User: Re-renders to display filtered vehicles
+    Zustand Store->>Gallery (React): Updates 'filteredVehicles' state
+    Gallery (React)-->>User: Re-renders to display filtered vehicles
 ```
 
 ---
@@ -171,17 +173,20 @@ To get the application up and running on your local machine, follow these simple
 
 ### Frontend (Client)
 
+- **User Authentication**: Full login and signup functionality, enabling personalized experiences.
 - **Interactive Dashboard**: A scatter plot visualization showing the relationship between vehicle weight and MPG, color-coded by origin.
 - **Dynamic Gallery & Filtering**: A gallery of all vehicles with a powerful filtering panel. Users can filter by name, origin, cylinders, and various numeric ranges (MPG, Weight, etc.).
 - **Data Sorting**: The gallery can be sorted by multiple attributes like MPG, weight, and model year.
 - **Vehicle Detail Page**: A dedicated page for each vehicle with a data-driven parallax effect where the animation is influenced by the car's acceleration value.
-- **Favorites**: Users can mark vehicles as favorites, and this state is persisted in local storage.
+- **Favorites**: Authenticated users can mark vehicles as favorites, and this state is persisted in the database.
 - **Responsive Design**: The application is fully responsive, built with **Tailwind CSS**.
 - **Light/Dark Theme**: The application supports both light and dark themes, with the theme being persisted in local storage.
 
 ### Backend (Server)
 
 - **Efficient RESTful API**: Built with Fastify to serve cleaned and structured vehicle data and pre-calculated statistics.
+- **User Authentication**: Endpoints for user registration and login.
+- **Favorites Management**: API endpoints for users to manage their favorite vehicles.
 - **Data Processing**: The server reads from a tab-separated `auto-mpg.csv`, handles missing values, and normalizes headers before populating the database.
 
 ---
@@ -201,9 +206,14 @@ To get the application up and running on your local machine, follow these simple
 
 The server exposes the following endpoints:
 
+- **`POST /api/v1/auth/register`**: Register a new user.
+- **`POST /api/v1/auth/login`**: Login a user.
 - **`GET /api/v1/vehicles`**: Returns a JSON array of vehicle objects. Supports filtering and sorting via query parameters.
 - **`GET /api/v1/vehicles/:id`**: Returns a single vehicle object matching the provided `id`.
 - **`GET /api/v1/stats`**: Returns a JSON object containing calculated statistics from the dataset, such as numeric ranges and unique categorical values.
 - **`GET /api/v1/vehicles/scatter-plot`**: Returns the data needed for the scatter plot on the dashboard.
 - **`GET /api/v1/vehicles/names`**: Returns a list of all vehicle names for the search autocomplete.
 - **`GET /api/v1/vehicles/by-ids`**: Returns a list of vehicles for a given list of ids, used for the favorites page.
+- **`GET /api/v1/favorites/:userId`**: Get all favorite vehicles for a user.
+- **`POST /api/v1/favorites`**: Add a vehicle to a user's favorites.
+- **`DELETE /api/v1/favorites`**: Remove a vehicle from a user's favorites.

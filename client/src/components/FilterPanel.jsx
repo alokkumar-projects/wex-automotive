@@ -7,7 +7,7 @@ import { AutoComplete } from 'primereact/autocomplete';
 import { SelectButton } from 'primereact/selectbutton';
 import { Slider } from 'primereact/slider';
 
-export default function FilterPanel({ query, setQuery }) {
+export default function FilterPanel({ query, setQuery, isLoading }) {
   const { stats, vehicleNames } = useVehicles();
   const [suggestions, setSuggestions] = useState([]);
 
@@ -21,12 +21,11 @@ export default function FilterPanel({ query, setQuery }) {
 
   const searchVehicles = (event) => {
     const query = event.query.toLowerCase();
-    const _suggestions = vehicleNames
-      .filter((v) => v.carName.toLowerCase().includes(query))
-      .map((v) => v.carName);
-    
-    // Get unique suggestions
-    setSuggestions([...new Set(_suggestions)]);
+    // FIX: Correctly filter the vehicleNames array, which contains strings.
+    const filteredNames = vehicleNames.filter((name) =>
+      name.toLowerCase().includes(query)
+    );
+    setSuggestions(filteredNames);
   };
 
   const handleSearchChange = (e) => {
@@ -60,6 +59,8 @@ export default function FilterPanel({ query, setQuery }) {
         placeholder="Search car name..."
         className="w-full"
         inputClassName="w-full border rounded px-3 py-2"
+        // FIX: Connect the loading spinner to the application's loading state.
+        loading={isLoading}
       />
 
       <div>

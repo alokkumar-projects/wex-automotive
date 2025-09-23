@@ -54,7 +54,7 @@ export default function Gallery() {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      <FilterPanel query={query} setQuery={setQuery} />
+      <FilterPanel query={query} setQuery={setQuery} isLoading={isLoading} />
       <div className="w-full flex flex-col">
         {renderContent()}
       </div>

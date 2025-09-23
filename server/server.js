@@ -39,11 +39,20 @@ const vehicleQuerySchema = {
 
 // --- API Route Definitions (v1) ---
 
+let statsCache = null;
+
 fastify.get('/', async () => ({ status: 'ok', service: 'wex-automotive-api' }));
 
 fastify.get('/api/v1/stats', async (req, reply) => {
+  // Return from cache if it exists
+  if (statsCache) {
+    fastify.log.info('Returning stats from cache');
+    return statsCache;
+  }
   const allVehicles = await vehicleService.getAllForStats();
-  return getStats(allVehicles);
+  statsCache = getStats(allVehicles);
+  fastify.log.info('Caching new stats result');
+  return statsCache;
 });
 
 fastify.get('/api/v1/vehicles', { schema: vehicleQuerySchema }, async (req, reply) => {

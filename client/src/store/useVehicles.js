@@ -27,6 +27,7 @@ export const useVehicles = create(
             vehicleApi.getVehicleNames(),
           ]);
           set({ stats: statsRes, vehicleNames: namesRes });
+          get().fetchFavoriteDetails();
         } catch (e) {
           console.error('Initialization failed', e);
           set({ isLoading: false, error: 'Failed to load initial data.' });
@@ -37,6 +38,7 @@ export const useVehicles = create(
         try {
           set({ isLoading: true, error: null, currentFilters: filters });
           const apiParams = { ...filters, page: 1, limit: 20 };
+          // This logic correctly converts arrays to strings
           for (const key in apiParams) {
             if (Array.isArray(apiParams[key])) {
               apiParams[key] = apiParams[key].join(',');
@@ -62,6 +64,12 @@ export const useVehicles = create(
         try {
           set({ isLoading: true });
           const apiParams = { ...currentFilters, page, limit: 20 };
+          for (const key in apiParams) {
+            if (Array.isArray(apiParams[key])) {
+              apiParams[key] = apiParams[key].join(',');
+            }
+          }
+
           const vehiclesRes = await vehicleApi.getVehicles(apiParams);
           set((state) => ({
             filteredVehicles: [...state.filteredVehicles, ...vehiclesRes],
@@ -92,15 +100,14 @@ export const useVehicles = create(
       },
 
       toggleFavorite: (id) => {
-        set((state) => {
-          const exists = state.favorites.includes(id);
-          const newFavorites = exists
-            ? state.favorites.filter((favId) => favId !== id)
-            : [...state.favorites, id];
-          return { favorites: newFavorites };
-        });
-        // This is the crucial fix: After updating the favorites list,
-        // immediately re-fetch the details for the favorites page.
+        const { favorites } = get();
+        const exists = favorites.includes(id);
+        const newFavorites = exists
+          ? favorites.filter((favId) => favId !== id)
+          : [...favorites, id];
+        
+        set({ favorites: newFavorites });
+        
         get().fetchFavoriteDetails();
       },
     }),
